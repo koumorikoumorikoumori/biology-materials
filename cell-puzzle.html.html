@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>細胞パズル｜原核細胞 vs 真核細胞</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#f5f2eb;--surf:#fff;--ink:#1a1a1a;--mut:#666;
+  --bdr:#ccc8be;--soft:#ece8de;
+  --pro:#1a6e3e;--prl:#e6f4ec;--prd:#0f4226;
+  --euk:#1448a0;--ekl:#e6edf8;--ekd:#0c2d6a;
+  --gold:#a07800;--gll:#fdf6e0;--glb:#c09010;
+  --ok:#166430;--okb:#e6f4ec;--er:#a82020;--erb:#fceaea;
+  --r:9px;--sh:0 2px 10px rgba(0,0,0,.09);
+}
+html,body{min-height:100vh;background:var(--bg);color:var(--ink);
+  font-family:"Yu Gothic","Meiryo","Hiragino Kaku Gothic ProN",sans-serif;
+  font-size:15px;line-height:1.6}
+button{font-family:inherit;cursor:pointer;border:none}
+
+header{background:var(--ink);color:#fff;padding:12px 20px;position:sticky;top:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.logo{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+.logo-tag{background:var(--pro);color:#fff;padding:2px 8px;border-radius:3px;font-size:11px}
+.prog{display:flex;align-items:center;gap:8px;font-size:12px;color:#bbb}
+.progbar{width:110px;height:5px;background:#444;border-radius:3px;overflow:hidden}
+.progfill{height:100%;background:linear-gradient(90deg,var(--pro),var(--euk));border-radius:3px;transition:width .35s}
+
+.tabs{display:flex;background:var(--surf);border-bottom:2px solid var(--bdr);overflow-x:auto}
+.tb{padding:11px 22px;font-size:13px;font-weight:700;background:none;color:var(--mut);
+  border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;
+  letter-spacing:.05em;transition:.18s;cursor:pointer}
+.tb:hover{color:var(--ink);background:var(--soft)}
+.tb.on{color:var(--ink);border-bottom-color:var(--ink)}
+
+.scr{display:none;max-width:1160px;margin:0 auto;padding:22px 16px}
+.scr.on{display:block}
+.stitle{font-size:20px;font-weight:700;margin-bottom:3px}
+.ssub{font-size:13px;color:var(--mut);margin-bottom:18px}
+
+.banner{border-radius:var(--r);padding:12px 16px;margin-bottom:16px;
+  font-size:13px;line-height:1.8;border:1px solid var(--glb);background:var(--gll)}
+
+/* ── TRAY ── */
+.tray-box{background:var(--surf);border:1.5px solid var(--bdr);border-radius:var(--r);
+  padding:14px;margin-bottom:14px;box-shadow:var(--sh)}
+.tray-lbl{font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--mut);margin-bottom:10px}
+.tray-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(152px,1fr));gap:7px}
+
+.part{display:flex;align-items:center;gap:8px;background:var(--soft);
+  border:2px solid var(--bdr);border-radius:8px;padding:9px 11px;
+  cursor:pointer;transition:all .18s;user-select:none}
+.part:hover{border-color:var(--glb);background:var(--gll)}
+.part.sel{border-color:var(--glb)!important;background:var(--gll);
+  box-shadow:0 0 0 3px rgba(160,120,0,.22);transform:scale(1.025)}
+/* .part.used は使用しない設計（複数配置を許可） */
+.pi{font-size:19px;flex-shrink:0;line-height:1}
+.pn{font-size:13px;font-weight:700;line-height:1.2}
+.pr{font-size:10px;color:var(--mut);line-height:1.3;margin-top:2px}
+
+.sel-bar{text-align:center;font-size:13px;font-weight:700;color:var(--mut);
+  min-height:22px;margin-bottom:12px;padding:6px;border-radius:6px;transition:.2s}
+.sel-bar.active{color:var(--gold);background:var(--gll);border:1px solid var(--glb)}
+
+/* ── PUZZLE GRID ── */
+.pgrid{display:grid;grid-template-columns:1fr;gap:20px;align-items:start;max-width:680px;margin:0 auto}
+
+.ccrd{background:var(--surf);border:1.5px solid var(--bdr);border-radius:var(--r);
+  overflow:hidden;box-shadow:var(--sh)}
+.chead{padding:10px 15px;font-weight:700;font-size:13px;letter-spacing:.05em;
+  display:flex;align-items:center;justify-content:space-between}
+.ccrd.pro .chead{background:var(--prl);color:var(--prd);border-bottom:1px solid #b5d9c3}
+.ccrd.euk .chead{background:var(--ekl);color:var(--ekd);border-bottom:1px solid #a0bde0}
+.ctag{font-size:10px;padding:2px 7px;border-radius:3px;font-weight:700;letter-spacing:.1em}
+.pro .ctag{background:var(--pro);color:#fff}
+.euk .ctag{background:var(--euk);color:#fff}
+
+.dwrap{padding:10px}
+.dcont{position:relative}
+.csvg{width:100%;max-width:640px;display:block;margin:0 auto}
+.slayer{position:absolute;inset:0;pointer-events:none}
+
+/* ── SLOTS  ──
+   スロットには機能の説明文のみ。構造名は書かない。 */
+.slot{
+  position:absolute;border-radius:7px;pointer-events:all;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;line-height:1.35;transition:all .2s;cursor:pointer;
+  background:rgba(255,255,255,.8);border:2.5px dashed #888880;
+  padding:3px;
+}
+/* 機能説明文 */
+.sfunc{font-size:10px;color:#333;pointer-events:none;font-style:normal;font-weight:600;line-height:1.45}
+/* 配置後は非表示 */
+.slot.filled .sfunc{display:none}
+
+.slot.ready{
+  border-color:var(--glb)!important;border-width:3px!important;border-style:solid!important;
+  background:rgba(160,120,0,.12)!important;
+  animation:rdy .95s ease-in-out infinite}
+@keyframes rdy{
+  0%,100%{box-shadow:0 0 0 1px rgba(160,120,0,.2)}
+  50%{box-shadow:0 0 0 5px rgba(160,120,0,.38)}}
+.slot:hover.ready{border-style:solid;background:rgba(160,120,0,.18)!important}
+.slot.filled{border-style:solid;border-color:#bbb;background:transparent;cursor:pointer}
+.slot.ck-ok{border-color:var(--ok)!important;background:rgba(22,100,48,.08)!important}
+.slot.ck-ng{border-color:var(--er)!important;background:rgba(168,32,32,.08)!important}
+
+/* ── PLACED CHIP ── */
+.chip{position:absolute;inset:2px;border-radius:5px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:9px;font-weight:700;text-align:center;line-height:1.2;
+  padding:2px;pointer-events:none}
+.chip .ci{font-size:17px;margin-bottom:2px;line-height:1}
+.chip .cn{font-size:10px;font-weight:700}
+
+/* ── BUTTONS ── */
+.brow{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;
+  border-radius:7px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;transition:all .18s}
+.btn-g{background:var(--ok);color:#fff}
+.btn-g:hover{background:#0f5028;transform:translateY(-1px)}
+.btn-r{background:var(--soft);color:var(--ink);border:1.5px solid var(--bdr)}
+.btn-r:hover{background:var(--bdr)}
+.btn-k{background:var(--ink);color:#fff}
+.btn-k:hover{background:#333;transform:translateY(-1px)}
+
+/* result */
+.rp{background:var(--surf);border:1.5px solid var(--bdr);border-radius:var(--r);
+  padding:16px;margin-top:12px;display:none}
+.rp.on{display:block}
+.rp h4{font-size:15px;font-weight:700;margin-bottom:10px}
+.rrow{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;font-size:13px}
+
+/* ── COMPARE TAB ── */
+.compare-layout{display:grid;grid-template-columns:1fr;gap:16px;align-items:start;max-width:720px;margin:0 auto}
+
+.struct-list{display:flex;flex-direction:column;gap:8px}
+.struct-card{
+  background:var(--surf);border:1.5px solid var(--bdr);border-radius:var(--r);
+  padding:13px 15px;cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;gap:12px}
+.struct-card:hover{border-color:var(--glb);background:var(--gll);transform:translateX(3px)}
+.struct-card.active{border-color:var(--ink);background:var(--ink);color:#fff}
+.struct-card.active .sc-role{color:#bbb}
+.sc-icon{font-size:22px;flex-shrink:0}
+.sc-name{font-size:14px;font-weight:700;line-height:1.2}
+.sc-role{font-size:11px;color:var(--mut);margin-top:2px}
+.sc-badge{margin-left:auto;display:flex;flex-direction:column;gap:3px;flex-shrink:0}
+.badge{font-size:10px;padding:2px 7px;border-radius:3px;font-weight:700;white-space:nowrap}
+.badge.y{background:var(--okb);color:var(--ok)}
+.badge.n{background:var(--erb);color:var(--er)}
+.badge.p{background:#fff8e1;color:#7a5000}
+
+.detail-panel{background:var(--surf);border:1.5px solid var(--bdr);border-radius:var(--r);
+  padding:22px;box-shadow:var(--sh)}
+.dp-title{font-size:18px;font-weight:700;margin-bottom:5px;display:flex;align-items:center;gap:10px}
+.dp-sub{font-size:12px;color:var(--mut);margin-bottom:14px;letter-spacing:.08em}
+.dp-sec{margin-bottom:14px}
+.dp-sec h4{font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--mut);
+  margin-bottom:7px;padding-bottom:4px;border-bottom:1px solid var(--bdr)}
+.dp-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.dp-cell{border-radius:7px;padding:10px 12px}
+.dp-cell.pc{background:var(--prl);border:1px solid #b5d9c3}
+.dp-cell.ec{background:var(--ekl);border:1px solid #a0bde0}
+.dp-cell-l{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--mut);margin-bottom:4px}
+.dp-cell-v{font-size:13px;font-weight:700;line-height:1.4}
+.dp-desc{font-size:13px;line-height:1.85;color:#333}
+.dp-tag{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700;margin-bottom:10px}
+.dp-tag.common{background:var(--gll);color:var(--gold);border:1px solid var(--glb)}
+.dp-tag.pro-only{background:var(--prl);color:var(--prd);border:1px solid #b5d9c3}
+.dp-tag.euk-only{background:var(--ekl);color:var(--ekd);border:1px solid #a0bde0}
+.dp-ph{color:var(--mut);font-size:14px;text-align:center;padding:40px 0;line-height:2;font-style:italic}
+
+.note{background:var(--ekl);border-left:3px solid var(--euk);
+  padding:11px 15px;border-radius:0 8px 8px 0;margin:12px 0;font-size:13px;line-height:1.8}
+.note strong{color:var(--ekd)}
+
+/* ── DORAEMON ── */
+.dcrd{background:var(--surf);border:1.5px solid var(--bdr);border-radius:var(--r);
+  padding:24px;max-width:720px;margin:0 auto;box-shadow:var(--sh)}
+.dq{font-size:22px;font-weight:700;text-align:center;margin-bottom:5px}
+.ds{font-size:13px;color:var(--mut);text-align:center;margin-bottom:20px;line-height:1.75}
+.crits{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:16px}
+@media(max-width:580px){.crits{grid-template-columns:1fr 1fr}}
+.crit{background:var(--soft);border:1.5px solid var(--bdr);border-radius:8px;
+  padding:12px 9px;text-align:center;transition:.18s}
+.crit.ys{border-color:var(--ok);background:var(--okb)}
+.crit.ns{border-color:var(--er);background:var(--erb)}
+.cico{font-size:22px;margin-bottom:4px}
+.cname{font-size:12px;font-weight:700;margin-bottom:2px}
+.cdesc{font-size:10px;color:var(--mut);line-height:1.4;margin-bottom:7px}
+.cbtns{display:flex;gap:5px;justify-content:center}
+.cbtn{padding:4px 11px;border-radius:5px;border:1px solid var(--bdr);
+  background:var(--surf);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:.18s}
+.cbtn.ya{background:var(--ok);color:#fff;border-color:var(--ok)}
+.cbtn.na{background:var(--er);color:#fff;border-color:var(--er)}
+.verd{background:var(--ink);color:#fff;border-radius:var(--r);
+  padding:20px 24px;margin-top:14px;display:none;text-align:center}
+.verd.on{display:block}
+.vtit{font-size:19px;font-weight:700;margin-bottom:8px}
+.vbod{font-size:13px;line-height:1.85;color:#ccc}
+.vbod strong{color:#fff}
+.hbox{background:var(--gll);border:1px solid var(--glb);border-radius:8px;
+  padding:13px 16px;margin-top:13px;font-size:13px;line-height:1.8}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span class="logo-tag">生物基礎</span>細胞パズル　原核 vs 真核</div>
+  <div class="prog">
+    <span>配置</span>
+    <div class="progbar"><div class="progfill" id="pf" style="width:0%"></div></div>
+    <span id="pt">0 / 11</span>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tb on" data-t="puzzle">① 細胞パズル</button>
+  <button class="tb" data-t="compare">② 構造の比較</button>
+  <button class="tb" data-t="doraemon">③ 発展：ドラえもん</button>
+</div>
+
+<!-- ══════════════ PUZZLE ══════════════ -->
+<div class="scr on" id="puzzle">
+  <div class="stitle">細胞の中身を組み立てよう</div>
+  <div class="ssub">スロットに書かれた「機能の説明文」を読んで、どの構造か考えてから配置しよう。</div>
+
+  <div class="banner">
+    <strong>使い方：</strong>
+    ① 下のパーツ一覧をよく読む　② 細胞の中のスロット（点線枠）に書かれた<strong>機能の説明</strong>を読む<br>
+    ③ 「これはどの構造か？」と考えてからパーツをクリックして選ぶ　④ スロットをクリックして置く<br>
+    ※ 置いたスロットをもう一度クリックすると取り消せる　　「答え合わせ」で正誤を確認しよう
+  </div>
+
+  <!-- パーツトレイ：名前は見える・スロットには書いていない -->
+  <div class="tray-box">
+    <div class="tray-lbl">パーツ一覧（名前と役割）— クリックして選ぶ</div>
+    <div class="tray-grid" id="tray"></div>
+  </div>
+  <div class="sel-bar" id="selBar">▲ パーツをクリックして選んでから、スロットをクリックして置こう</div>
+
+  <div class="pgrid">
+    <!-- 原核細胞 -->
+    <div class="ccrd pro">
+      <div class="chead">原核細胞（細菌のモデル）<span class="ctag">PROKARYOTE</span></div>
+      <div class="dwrap">
+        <div class="dcont" id="proC">
+          <svg class="csvg" viewBox="0 0 340 310" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="170" cy="158" rx="156" ry="140" fill="#c8e8d4" stroke="#3a8a55" stroke-width="3"/>
+            <ellipse cx="170" cy="158" rx="142" ry="126" fill="#ddf0e6" stroke="#3a8a55" stroke-width="1.5"/>
+            <ellipse cx="170" cy="158" rx="128" ry="113" fill="#eef8f2" stroke="#1a6e3e" stroke-width="2"/>
+            <ellipse cx="170" cy="158" rx="125" ry="110" fill="#f6fbf8"/>
+            <ellipse cx="170" cy="150" rx="52" ry="44" fill="#fffbe8" stroke="#b08000" stroke-width="1.8" stroke-dasharray="6 3"/>
+            <text x="170" y="154" font-size="10" fill="#7a5a00" text-anchor="middle" font-weight="bold" font-family="Yu Gothic,sans-serif">核様体</text>
+            <text x="170" y="167" font-size="10" fill="#a07800" text-anchor="middle" font-family="Yu Gothic,sans-serif">（核膜なし）</text>
+            <circle cx="88"  cy="186" r="5"   fill="#d06010" opacity=".52"/>
+            <circle cx="244" cy="116" r="5"   fill="#d06010" opacity=".52"/>
+            <circle cx="110" cy="106" r="4.5" fill="#d06010" opacity=".48"/>
+            <circle cx="236" cy="196" r="5"   fill="#d06010" opacity=".52"/>
+            <circle cx="184" cy="206" r="4.5" fill="#d06010" opacity=".46"/>
+            <circle cx="138" cy="208" r="4.5" fill="#d06010" opacity=".46"/>
+            <circle cx="248" cy="155" r="20"  fill="#f4e8ff" stroke="#7040b0" stroke-width="1.8" stroke-dasharray="5 3"/>
+            <text x="248" y="178" font-size="9.5" fill="#6030a0" text-anchor="middle" font-family="Yu Gothic,sans-serif">？</text>
+            <text x="60"  y="268" font-size="10" fill="#d06010" text-anchor="middle" font-family="Yu Gothic,sans-serif">● リボソーム（例）</text>
+          </svg>
+          <div class="slayer" id="proSL"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 真核細胞 -->
+    <div class="ccrd euk">
+      <div class="chead">真核細胞（動物細胞のモデル）<span class="ctag">EUKARYOTE</span></div>
+      <div class="dwrap">
+        <div class="dcont" id="eukC">
+          <svg class="csvg" viewBox="0 0 340 310" xmlns="http://www.w3.org/2000/svg">
+            <path d="M170,16 Q264,20 296,108 Q318,190 258,248 Q200,278 155,274 Q78,268 42,190 Q16,120 58,64 Q92,18 170,16Z"
+              fill="#c4d4f0" stroke="#1448a0" stroke-width="3"/>
+            <path d="M170,22 Q258,26 288,110 Q308,188 250,244 Q194,272 157,268 Q84,262 50,187 Q26,122 64,68 Q96,24 170,22Z"
+              fill="#f0f4fc"/>
+            <path d="M76,180 Q112,156 148,182 Q182,204 218,178" fill="none" stroke="#228855" stroke-width="2.5" opacity=".85"/>
+            <path d="M74,198 Q110,174 146,200 Q180,220 216,196" fill="none" stroke="#228855" stroke-width="2.2" opacity=".68"/>
+            <path d="M76,216 Q112,194 148,218" fill="none" stroke="#228855" stroke-width="1.8" opacity=".5"/>
+            <ellipse cx="256" cy="108" rx="30" ry="16" fill="#fff0c0" stroke="#d07010" stroke-width="2"/>
+            <path d="M230,108 Q243,99 256,108 Q243,117 230,108" fill="none" stroke="#d07010" stroke-width="1.3" opacity=".7"/>
+            <ellipse cx="76"  cy="204" rx="26" ry="14" fill="#fff0c0" stroke="#d07010" stroke-width="1.8"/>
+            <ellipse cx="170" cy="120" rx="60" ry="54" fill="#d8e8fe" stroke="#1448a0" stroke-width="2.5"/>
+            <ellipse cx="170" cy="120" rx="54" ry="48" fill="#edf4ff" stroke="#1448a0" stroke-width="1.2" stroke-dasharray="4 3"/>
+            <circle cx="130" cy="90"  r="3.5" fill="#1448a0" opacity=".35"/>
+            <circle cx="210" cy="90"  r="3.5" fill="#1448a0" opacity=".35"/>
+            <circle cx="112" cy="128" r="3.5" fill="#1448a0" opacity=".35"/>
+            <circle cx="228" cy="128" r="3.5" fill="#1448a0" opacity=".35"/>
+            <circle cx="170" cy="120" r="14"  fill="#fce4a8" stroke="#c09010" stroke-width="1.5"/>
+            <text x="170" y="124" font-size="9" fill="#7a5800" text-anchor="middle" font-family="Yu Gothic,sans-serif">核小体</text>
+            <circle cx="108" cy="156" r="4.5" fill="#d06010" opacity=".5"/>
+            <circle cx="218" cy="172" r="4.5" fill="#d06010" opacity=".5"/>
+            <circle cx="125" cy="236" r="4"   fill="#d06010" opacity=".45"/>
+          </svg>
+          <div class="slayer" id="eukSL"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="brow">
+    <button class="btn btn-g" id="checkBtn">✓ 答え合わせ</button>
+    <button class="btn btn-r" id="resetBtn">↺ リセット</button>
+  </div>
+  <div class="rp" id="rp"></div>
+</div>
+
+<!-- ══════════════ COMPARE ══════════════ -->
+<div class="scr" id="compare">
+  <div class="stitle">構造の比較 — クリックして詳しく確認しよう</div>
+  <div class="ssub">左の構造名をクリックすると、右に原核・真核での違いと説明が表示される。</div>
+  <div class="note">
+    <strong>共通点（どちらにも必ずある）：</strong>
+    細胞膜・DNA（遺伝物質）・リボソーム の3つ。これらは生命活動の最低限の基盤。
+  </div>
+  <div class="compare-layout">
+    <div class="struct-list" id="structList"></div>
+    <div class="detail-panel" id="detailPanel">
+      <div class="dp-ph">← 左の構造名をクリックすると<br>詳しい説明が表示されます</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ DORAEMON ══════════════ -->
+<div class="scr" id="doraemon">
+  <div class="dcrd">
+    <div style="display:inline-block;background:var(--ink);color:#fff;padding:2px 10px;font-size:10px;letter-spacing:.2em;border-radius:3px;margin-bottom:12px">FINAL QUESTION</div>
+    <div class="dq">ドラえもんは生物か？</div>
+    <div class="ds">今日学んだ「生物の条件」を使って考えよう。<br>各項目に YES / NO を選んでから「判定」を押す。</div>
+    <div class="crits" id="critsG">
+      <div class="crit" data-k="cell"><div class="cico">🫧</div><div class="cname">細胞でできている</div><div class="cdesc">体の基本単位が細胞か？</div><div class="cbtns"><button class="cbtn" data-v="yes">YES</button><button class="cbtn" data-v="no">NO</button></div></div>
+      <div class="crit" data-k="dna"><div class="cico">🧬</div><div class="cname">DNAをもつ</div><div class="cdesc">遺伝情報をDNAとして持つか？</div><div class="cbtns"><button class="cbtn" data-v="yes">YES</button><button class="cbtn" data-v="no">NO</button></div></div>
+      <div class="crit" data-k="metab"><div class="cico">🔋</div><div class="cname">代謝する</div><div class="cdesc">どら焼きを細胞で消化してATPにするか？</div><div class="cbtns"><button class="cbtn" data-v="yes">YES</button><button class="cbtn" data-v="no">NO</button></div></div>
+      <div class="crit" data-k="grow"><div class="cico">🌱</div><div class="cname">成長・増殖する</div><div class="cdesc">細胞分裂して増えたり成長したりするか？</div><div class="cbtns"><button class="cbtn" data-v="yes">YES</button><button class="cbtn" data-v="no">NO</button></div></div>
+      <div class="crit" data-k="react"><div class="cico">⚡</div><div class="cname">刺激に反応する</div><div class="cdesc">外界の刺激（音・光など）に反応するか？</div><div class="cbtns"><button class="cbtn" data-v="yes">YES</button><button class="cbtn" data-v="no">NO</button></div></div>
+      <div class="crit" data-k="inherit"><div class="cico">👶</div><div class="cname">遺伝情報を子に伝える</div><div class="cdesc">DNAを複製して次世代に渡せるか？</div><div class="cbtns"><button class="cbtn" data-v="yes">YES</button><button class="cbtn" data-v="no">NO</button></div></div>
+    </div>
+    <div style="text-align:center"><button class="btn btn-k" id="judgeBtn">🔬 判定する</button></div>
+    <div class="verd" id="verd"></div>
+    <div class="hbox" style="margin-top:14px">
+      <strong>考察のヒント：</strong>生物学的な定義は<strong>「細胞・代謝・遺伝」の3点セット</strong>。感情や知性は含まれない。自分の根拠をワークシートに書こう。
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══ PARTS ═══ */
+const PARTS = [
+  {k:'membrane', icon:'🫧', name:'細胞膜',        role:'物質の出入りを管理する薄い膜',          col:'#1448a0'},
+  {k:'dna',      icon:'🧬', name:'DNA（遺伝物質）',role:'すべての遺伝情報が記録された分子',       col:'#a82020'},
+  {k:'ribosome', icon:'🟡', name:'リボソーム',     role:'タンパク質を合成する小さな粒子',         col:'#c07010'},
+  {k:'nucleus',  icon:'🔵', name:'核（核膜あり）', role:'DNAを核膜という二重の膜で包んで保護する',col:'#1448a0'},
+  {k:'mito',     icon:'🔋', name:'ミトコンドリア', role:'呼吸によりATPを大量生産する',            col:'#c07010'},
+  {k:'er',       icon:'🌀', name:'小胞体（ER）',   role:'タンパク質・脂質を合成して輸送する膜系', col:'#1a7040'},
+  {k:'cellwall', icon:'🧱', name:'細胞壁',         role:'細胞膜の外側を囲む硬い保護の壁',         col:'#1a6e3e'},
+  {k:'plasmid',  icon:'⭕', name:'プラスミド',     role:'染色体とは別の小さな環状のDNA',           col:'#7040b0'},
+];
+
+/* ═══ CORRECT ANSWERS ═══ */
+const ANS = {
+  'ps-wall':    'cellwall',
+  'ps-mem':     'membrane',
+  'ps-dna':     'dna',
+  'ps-ribo':    'ribosome',
+  'ps-plasmid': 'plasmid',
+  'es-mem':     'membrane',
+  'es-nuc':     'nucleus',
+  'es-dna':     'dna',
+  'es-mito':    'mito',
+  'es-ribo':    'ribosome',
+  'es-er':      'er',
+};
+const TOTAL = Object.keys(ANS).length;
+
+/* ═══ SLOT DEFINITIONS
+  func: 機能の説明文のみ（構造名は書かない）
+═══ */
+const PRO_SLOTS = [
+  {id:'ps-wall',   func:'細胞膜の外側にあり、細胞の形を保ち、外界の圧力から細胞を守る硬い壁。',
+    top:'2%',  left:'8%',  w:'40%', h:'12%'},
+  {id:'ps-mem',    func:'細胞の最も内側にある薄い膜。物質の出入りを選別する。',
+    top:'2%',  left:'52%', w:'40%', h:'12%'},
+  {id:'ps-dna',    func:'この細胞の遺伝情報が入っている場所。核膜はなく、細胞質中に直接存在する。',
+    top:'34%', left:'24%', w:'52%', h:'22%'},
+  {id:'ps-ribo',   func:'アミノ酸をつなげてタンパク質をつくる。原核・真核どちらにも存在する。',
+    top:'62%', left:'4%',  w:'38%', h:'18%'},
+  {id:'ps-plasmid',func:'多くの細菌がもつ、染色体とは独立した小型の環状DNA。薬剤耐性の原因になることがある。',
+    top:'60%', left:'58%', w:'36%', h:'20%'},
+];
+const EUK_SLOTS = [
+  {id:'es-mem',  func:'細胞の境界を作る薄い膜。物質の出入りを選別し、細胞の内外を隔てる。',
+    top:'2%',  left:'8%',  w:'40%', h:'12%'},
+  {id:'es-nuc',  func:'DNAを二重の膜（核膜）で囲んで保護する球形の構造。真核細胞の最大の特徴。',
+    top:'22%', left:'22%', w:'56%', h:'28%'},
+  {id:'es-dna',  func:'この細胞の遺伝情報の本体。核の中に染色体として存在する。',
+    top:'52%', left:'4%',  w:'42%', h:'15%'},
+  {id:'es-mito', func:'有機物を酸素で分解してATPを大量に作り出すエネルギー工場。二重の膜をもつ。',
+    top:'22%', left:'80%', w:'18%', h:'18%'},
+  {id:'es-ribo', func:'アミノ酸をつなげてタンパク質をつくる。原核・真核どちらにも存在する。',
+    top:'52%', left:'50%', w:'38%', h:'15%'},
+  {id:'es-er',   func:'タンパク質や脂質を合成して細胞内の各所へ輸送する。核に隣接する膜のネットワーク。',
+    top:'74%', left:'4%',  w:'58%', h:'20%'},
+];
+
+/* ═══ BUILD TRAY ═══ */
+const trayEl = document.getElementById('tray');
+PARTS.forEach(p => {
+  const el = document.createElement('div');
+  el.className = 'part'; el.dataset.k = p.k;
+  el.innerHTML = `<span class="pi">${p.icon}</span><div><div class="pn">${p.name}</div><div class="pr">${p.role}</div></div>`;
+  el.addEventListener('click', () => selectPart(p.k));
+  trayEl.appendChild(el);
+});
+
+/* ═══ BUILD SLOTS ═══ */
+function buildSlots(layerId, defs) {
+  const layer = document.getElementById(layerId);
+  defs.forEach(d => {
+    const s = document.createElement('div');
+    s.className = 'slot'; s.id = d.id;
+    s.style.cssText = `top:${d.top};left:${d.left};width:${d.w};height:${d.h}`;
+    // 機能説明文のみ
+    s.innerHTML = `<span class="sfunc">${d.func}</span>`;
+    s.addEventListener('click', () => slotClicked(s));
+    layer.appendChild(s);
+  });
+}
+buildSlots('proSL', PRO_SLOTS);
+buildSlots('eukSL', EUK_SLOTS);
+
+/* ═══ STATE ═══ */
+let selKey = null;
+const placed = {};
+const getPart = k => PARTS.find(p => p.k === k);
+const updProg = () => {
+  const n = Object.keys(placed).length;
+  document.getElementById('pf').style.width = (n/TOTAL*100)+'%';
+  document.getElementById('pt').textContent = n+' / '+TOTAL;
+};
+
+function selectPart(k) {
+  selKey = (selKey===k) ? null : k;
+  refreshUI();
+}
+
+function refreshUI() {
+  document.querySelectorAll('.part').forEach(el => el.classList.toggle('sel', el.dataset.k===selKey));
+  document.querySelectorAll('.slot').forEach(s => s.classList.toggle('ready', !!selKey && !placed[s.id]));
+  const bar = document.getElementById('selBar');
+  if (selKey) {
+    const p = getPart(selKey);
+    bar.textContent = `選択中：${p.icon} ${p.name}　→ どのスロットに入れる？`;
+    bar.classList.add('active');
+  } else {
+    bar.textContent = '▲ パーツをクリックして選んでから、スロットをクリックして置こう';
+    bar.classList.remove('active');
+  }
+}
+
+function slotClicked(slot) {
+  if (placed[slot.id]) { removeSlot(slot); return; }
+  if (!selKey) return;
+  placeSlot(slot, selKey);
+  selKey = null; refreshUI();
+}
+
+function placeSlot(slot, key) {
+  placed[slot.id] = key;
+  const p = getPart(key);
+  slot.classList.add('filled');
+  slot.classList.remove('ready','ck-ok','ck-ng');
+  const chip = document.createElement('div');
+  chip.className = 'chip';
+  chip.style.cssText = `background:${p.col}1a;border:1.5px solid ${p.col}55;color:${p.col}`;
+  chip.innerHTML = `<span class="ci">${p.icon}</span><span class="cn">${p.name}</span>`;
+  slot.innerHTML = ''; slot.appendChild(chip);
+  // パーツは使い切りにしない（複数スロットに同じパーツを配置可能）
+  updProg();
+}
+
+function removeSlot(slot) {
+  const key = placed[slot.id]; if (!key) return;
+  delete placed[slot.id];
+  slot.classList.remove('filled','ready','ck-ok','ck-ng');
+  const def = [...PRO_SLOTS,...EUK_SLOTS].find(d => d.id===slot.id);
+  slot.innerHTML = `<span class="sfunc">${def?.func||''}</span>`;
+  updProg();
+}
+
+/* ═══ CHECK ═══ */
+document.getElementById('checkBtn').addEventListener('click', () => {
+  let ok=0, msgs=[];
+  Object.entries(ANS).forEach(([sid,ck]) => {
+    const slot = document.getElementById(sid);
+    const act = placed[sid];
+    slot.classList.remove('ck-ok','ck-ng');
+    if (!act) {
+      const def = [...PRO_SLOTS,...EUK_SLOTS].find(d => d.id===sid);
+      msgs.push({ok:false, txt:`未配置のスロットがあります：「${def?.func.slice(0,20)}…」`});
+      return;
+    }
+    if (act===ck) { ok++; slot.classList.add('ck-ok'); }
+    else {
+      slot.classList.add('ck-ng');
+      msgs.push({ok:false, txt:`不正解：「${getPart(act).name}」→ 正解は「${getPart(ck).name}」`});
+    }
+  });
+  const rp = document.getElementById('rp'); rp.classList.add('on');
+  let h = `<h4>${ok===TOTAL ? '🎉 全問正解！' : ok+' / '+TOTAL+' 正解'}</h4>`;
+  msgs.forEach(m => h+=`<div class="rrow"><span>❌</span><span>${m.txt}</span></div>`);
+  if (ok===TOTAL) h+=`<div style="color:var(--ok);font-size:13px;margin-top:8px">✅ タブ②「構造の比較」で各構造の詳細を確認しよう！</div>`;
+  rp.innerHTML = h;
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  selKey = null;
+  [...Object.keys(placed)].forEach(sid => removeSlot(document.getElementById(sid)));
+  document.querySelectorAll('.slot').forEach(s => s.classList.remove('ck-ok','ck-ng'));
+  const rp=document.getElementById('rp'); rp.classList.remove('on'); rp.innerHTML='';
+  refreshUI();
+});
+
+/* ═══ COMPARE TAB ═══ */
+const STRUCTS = [
+  {k:'nucleus',  icon:'🔵',name:'核（核膜に包まれた核）',role:'遺伝情報の保護・管理',
+   proVal:'なし',eukVal:'あり',pb:'n',eb:'y',tag:'euk-only',tl:'真核細胞のみ',
+   pro:'核膜はなく、DNAは核様体として細胞質に散在する。「原核（核がない）」という名前の由来。',
+   euk:'DNAが核膜（二重膜）に包まれて保護されている。「真核（本当の核あり）」という名前の由来。',
+   pt:'顕微鏡での観察でも確認できる最大の違い。酵母菌（真核）には核が見えるが乳酸菌（原核）には見えない。'},
+  {k:'membrane',icon:'🫧',name:'細胞膜',role:'物質の出入りを管理する',
+   proVal:'あり',eukVal:'あり',pb:'y',eb:'y',tag:'common',tl:'共通（どちらにもある）',
+   pro:'リン脂質二重層。細胞壁の内側にあり、物質の選択的な透過を担う。',
+   euk:'構造は原核と同じ。動物細胞では最外層となり、物質の出入りを管理する。',
+   pt:'すべての細胞に共通する最も基本的な構造。'},
+  {k:'dna',     icon:'🧬',name:'DNA（遺伝物質）',role:'遺伝情報の本体',
+   proVal:'あり（環状）',eukVal:'あり（線状）',pb:'y',eb:'y',tag:'common',tl:'共通（どちらにもある）',
+   pro:'環状のDNAが核膜なしで細胞質（核様体）に存在する。プラスミドという小型DNAもある。',
+   euk:'線状のDNAが核膜に包まれた核の中に存在する。ヒトには46本の染色体がある。',
+   pt:'形と収納場所は違うが、塩基（A・T・G・C）はすべての生物で共通。'},
+  {k:'ribosome',icon:'🟡',name:'リボソーム',role:'タンパク質を合成する粒子',
+   proVal:'あり（70S）',eukVal:'あり（80S）',pb:'y',eb:'y',tag:'common',tl:'共通（どちらにもある）',
+   pro:'70S型（やや小さい）。細胞質に多数散在し、タンパク質を合成する。',
+   euk:'80S型（やや大きい）。細胞質・小胞体の表面に存在する。',
+   pt:'サイズの差が抗生物質の鍵。多くの抗生物質は細菌（70S）のリボソームのみを標的にする。'},
+  {k:'mito',    icon:'🔋',name:'ミトコンドリア',role:'ATPを大量生産するエネルギー工場',
+   proVal:'なし',eukVal:'あり',pb:'n',eb:'y',tag:'euk-only',tl:'真核細胞のみ',
+   pro:'ない。エネルギー生産（解糖など）は細胞質で行われるが効率は低い。',
+   euk:'二重膜構造。内膜のクリステで酸化的リン酸化を行いATPを大量生産する。',
+   pt:'独自のDNAとリボソームをもつ。細菌が取り込まれた「細胞内共生説」の根拠。'},
+  {k:'er',      icon:'🌀',name:'小胞体（ER）',role:'タンパク質・脂質の合成と輸送',
+   proVal:'なし',eukVal:'あり',pb:'n',eb:'y',tag:'euk-only',tl:'真核細胞のみ',
+   pro:'ない。真核細胞のような複雑な膜系をもたない。',
+   euk:'粗面ER（リボソーム付き）はタンパク質を合成・修飾し、滑面ERは脂質を合成する。',
+   pt:'真核細胞は膜系のネットワーク（ER・ゴルジ体）で物質の合成・輸送を高効率化している。'},
+  {k:'cellwall',icon:'🧱',name:'細胞壁',role:'細胞を外側から守る硬い壁',
+   proVal:'あり（ペプチドグリカン）',eukVal:'一部あり',pb:'y',eb:'p',tag:'pro-only',tl:'主に原核細胞',
+   pro:'ペプチドグリカンという物質。形を維持し、浸透圧から細胞を守る。',
+   euk:'植物＝セルロース、菌類＝キチン。動物細胞にはない。',
+   pt:'ペニシリンなどはペプチドグリカン合成を阻害する。ヒトの細胞に細胞壁がないため無害。'},
+  {k:'plasmid', icon:'⭕',name:'プラスミド',role:'細菌がもつ小型の環状DNA',
+   proVal:'あり（多くの細菌）',eukVal:'通常なし',pb:'y',eb:'n',tag:'pro-only',tl:'主に原核細胞',
+   pro:'染色体とは別の小型環状DNA。薬剤耐性遺伝子などをもつことがある。細菌間で受け渡しされる。',
+   euk:'通常は存在しない。',
+   pt:'耐性遺伝子をもつプラスミドが細菌間で広がることで多剤耐性菌が生まれる。'},
+];
+
+const structList = document.getElementById('structList');
+STRUCTS.forEach(s => {
+  const card = document.createElement('div');
+  card.className = 'struct-card'; card.dataset.k = s.k;
+  card.innerHTML = `
+    <span class="sc-icon">${s.icon}</span>
+    <div style="flex:1;min-width:0">
+      <div class="sc-name">${s.name}</div>
+      <div class="sc-role">${s.role}</div>
+    </div>
+    <div class="sc-badge">
+      <span class="badge ${s.pb}">${s.pb==='y'?'原核◎':s.pb==='n'?'原核✕':'原核△'}</span>
+      <span class="badge ${s.eb}">${s.eb==='y'?'真核◎':s.eb==='n'?'真核✕':'真核△'}</span>
+    </div>`;
+  card.addEventListener('click', () => showDetail(s, card));
+  structList.appendChild(card);
+});
+
+function showDetail(s, card) {
+  document.querySelectorAll('.struct-card').forEach(c => c.classList.remove('active'));
+  card.classList.add('active');
+  document.getElementById('detailPanel').innerHTML = `
+    <div class="dp-title"><span>${s.icon}</span>${s.name}</div>
+    <div class="dp-sub">${s.role}</div>
+    <span class="dp-tag ${s.tag}">${s.tl}</span>
+    <div class="dp-sec">
+      <h4>原核・真核での比較</h4>
+      <div class="dp-grid">
+        <div class="dp-cell pc"><div class="dp-cell-l">原核細胞（乳酸菌）</div><div class="dp-cell-v">${s.proVal}</div></div>
+        <div class="dp-cell ec"><div class="dp-cell-l">真核細胞（酵母菌・ヒト）</div><div class="dp-cell-v">${s.eukVal}</div></div>
+      </div>
+    </div>
+    <div class="dp-sec"><h4>原核細胞での説明</h4><div class="dp-desc">${s.pro}</div></div>
+    <div class="dp-sec"><h4>真核細胞での説明</h4><div class="dp-desc">${s.euk}</div></div>
+    <div class="dp-sec"><h4>覚えておくべきポイント</h4>
+      <div class="dp-desc" style="background:var(--gll);border-left:3px solid var(--glb);padding:10px 13px;border-radius:0 6px 6px 0">${s.pt}</div>
+    </div>`;
+}
+
+/* ═══ TABS ═══ */
+document.querySelectorAll('.tb').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tb').forEach(b => b.classList.remove('on'));
+    document.querySelectorAll('.scr').forEach(s => s.classList.remove('on'));
+    btn.classList.add('on');
+    document.getElementById(btn.dataset.t).classList.add('on');
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
+});
+
+/* ═══ DORAEMON ═══ */
+const dAns = {};
+document.querySelectorAll('.crit').forEach(card => {
+  card.querySelectorAll('.cbtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      card.querySelectorAll('.cbtn').forEach(b => b.classList.remove('ya','na'));
+      btn.classList.add(btn.dataset.v==='yes'?'ya':'na');
+      dAns[card.dataset.k] = btn.dataset.v;
+      card.classList.remove('ys','ns');
+      card.classList.add(btn.dataset.v==='yes'?'ys':'ns');
+    });
+  });
+});
+document.getElementById('judgeBtn').addEventListener('click', () => {
+  if (Object.keys(dAns).length<6){alert('すべての項目にYES/NOを選んでください。');return;}
+  const y = Object.values(dAns).filter(v=>v==='yes').length;
+  const v = document.getElementById('verd'); v.classList.add('on');
+  let t,b;
+  if(y<=1){t='判定：生物ではない';b='細胞をもたない・DNAをもたない・自己増殖しない。<strong>生物の3条件をすべて満たさない</strong>ため「生物ではない」と言える。ただし感情はある。これをどう考える？';}
+  else if(y<=3){t='判定：ほぼ生物ではない';b='一部の条件はあてはまるが<strong>細胞・DNA・自己増殖</strong>の3点が揃わない。生物学的定義では「生物ではない」が通説。';}
+  else if(y<=4){t='判定：グレーゾーン';b='生物に似た性質を多くもつが<strong>「細胞と自己増殖」がない</strong>限り生物学的には線引きが難しい。ウイルスと同じ「グレーゾーン」かもしれない。';}
+  else{t='判定：生物に近い！';b='多くの条件があてはまると判断した。でも生物基礎の定義は<strong>「細胞を基本単位とする」</strong>こと。この1点でどう変わる？';}
+  v.innerHTML = `<div class="vtit">${t}</div><div class="vbod">${b}</div>`;
+});
+</script>
+</body>
+</html>
