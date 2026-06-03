@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>発生クイズ — ウニ・カエルの発生と胚葉分化</title>
+<style>
+:root{
+  --oc:#0d3a5c;--oc2:#1a5c7a;--se:#0d5c4a;--se2:#1a8060;
+  --am:#a06010;--am2:#c8820a;
+  --ec:#1a4090;--ms:#8a5010;--en:#0d5c4a;
+  --ok:#16803c;--ng:#b91c1c;
+  --bg:#f4f7fb;--card:#ffffff;--border:#d0dae8;
+  --txt:#111827;--txt2:#4b5563;--txt3:#9ca3af;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans JP',system-ui,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh}
+
+/* ─── HEADER ─── */
+#hdr{
+  background:linear-gradient(135deg,var(--oc),var(--oc2));
+  padding:20px 24px 16px;color:#fff;
+  box-shadow:0 2px 12px rgba(13,58,92,.35);
+}
+#hdr h1{font-size:1.35rem;font-weight:700;letter-spacing:.04em;margin-bottom:4px}
+#hdr p{font-size:.82rem;opacity:.8}
+
+/* ─── TABS ─── */
+.tab-nav{
+  display:flex;gap:0;background:var(--oc);padding:0 16px;
+  border-bottom:3px solid rgba(255,255,255,.15);
+}
+.tab-btn{
+  padding:11px 20px;font-size:.88rem;font-weight:600;color:rgba(255,255,255,.7);
+  background:transparent;border:none;cursor:pointer;border-bottom:3px solid transparent;
+  margin-bottom:-3px;transition:all .2s;white-space:nowrap;
+}
+.tab-btn.active{color:#fff;border-bottom-color:#fbbf24}
+.tab-btn:hover:not(.active){color:#fff;background:rgba(255,255,255,.08)}
+
+/* ─── TAB CONTENT ─── */
+.tab-pane{display:none;padding:20px 16px 32px;max-width:1100px;margin:0 auto}
+.tab-pane.active{display:block}
+
+/* ─── QUIZ HEADER ─── */
+.qhdr{
+  background:var(--card);border:1px solid var(--border);border-radius:8px;
+  padding:14px 18px;margin-bottom:18px;display:flex;align-items:flex-start;gap:14px;
+  box-shadow:0 1px 4px rgba(0,0,0,.06);
+}
+.qhdr-icon{font-size:2rem;line-height:1}
+.qhdr h2{font-size:1.05rem;font-weight:700;color:var(--oc);margin-bottom:4px}
+.qhdr p{font-size:.82rem;color:var(--txt2);line-height:1.55}
+
+/* ─── SORT AREA ─── */
+.sort-layout{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:700px){.sort-layout{grid-template-columns:1fr}}
+.zone-label{font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--txt3);margin-bottom:8px}
+
+.cards-pool{
+  min-height:220px;border:2px dashed var(--border);border-radius:8px;padding:10px;
+  display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start;background:#f9fafb;
+  transition:border-color .2s;
+}
+.cards-pool.drag-over{border-color:var(--oc2);background:#eef4fb}
+
+.slots-area{
+  min-height:220px;border:2px solid var(--border);border-radius:8px;padding:8px;
+  display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start;background:#fff;
+}
+
+/* ─── STAGE CARD ─── */
+.stage-card{
+  width:112px;background:var(--card);border:2px solid var(--border);
+  border-radius:8px;padding:8px 6px 6px;cursor:grab;
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  transition:transform .15s,box-shadow .15s,border-color .2s;
+  user-select:none;position:relative;
+}
+.stage-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.stage-card.selected{border-color:var(--am2);box-shadow:0 0 0 3px rgba(200,130,10,.3);transform:scale(1.04)}
+.stage-card.correct{border-color:var(--ok);background:#f0fdf4}
+.stage-card.wrong{border-color:var(--ng);background:#fef2f2;animation:shake .4s}
+.stage-card svg{width:80px;height:80px}
+.stage-card .cname{font-size:.72rem;font-weight:700;text-align:center;color:var(--oc);line-height:1.3}
+.stage-card .chint{font-size:.62rem;color:var(--txt3);text-align:center;line-height:1.3;margin-top:2px}
+.stage-card .cbadge{
+  position:absolute;top:-8px;right:-8px;
+  width:20px;height:20px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.7rem;font-weight:700;color:#fff;
+}
+.cbadge.ok{background:var(--ok)}
+.cbadge.ng{background:var(--ng)}
+
+/* SLOT */
+.slot{
+  width:112px;min-height:136px;border:2px dashed #c8d5e8;border-radius:8px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:#f8fafc;transition:all .2s;position:relative;
+}
+.slot.drag-over{border-color:var(--oc);background:#eef4fb}
+.slot.has-card{border-color:transparent;background:transparent;padding:0}
+.slot-num{font-size:.7rem;font-weight:700;color:var(--txt3);margin-bottom:4px}
+.slot-hint{font-size:.65rem;color:var(--txt3);text-align:center;padding:0 6px}
+.slot.correct{box-shadow:0 0 0 2px var(--ok)}
+.slot.wrong{box-shadow:0 0 0 2px var(--ng);animation:shake .4s}
+
+@keyframes shake{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-5px)}
+  40%{transform:translateX(5px)}
+  60%{transform:translateX(-3px)}
+  80%{transform:translateX(3px)}
+}
+
+/* ─── BUTTONS ─── */
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.btn{
+  padding:9px 22px;border-radius:6px;border:none;font-size:.88rem;
+  font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:.03em;
+}
+.btn-primary{background:var(--oc);color:#fff}
+.btn-primary:hover{background:var(--oc2)}
+.btn-ghost{background:#fff;color:var(--txt2);border:1.5px solid var(--border)}
+.btn-ghost:hover{border-color:var(--oc2);color:var(--oc)}
+
+/* SCORE BOX */
+.score-box{
+  display:flex;align-items:center;gap:8px;padding:8px 16px;
+  border-radius:6px;font-size:.9rem;font-weight:700;
+  background:#f0fdf4;border:1.5px solid #86efac;color:var(--ok);
+  opacity:0;transition:opacity .4s;
+}
+.score-box.show{opacity:1}
+.score-box.wrong-score{background:#fef2f2;border-color:#fca5a5;color:var(--ng)}
+
+/* ─── GERM LAYER QUIZ ─── */
+.germ-layout{display:grid;grid-template-columns:1fr 3fr;gap:16px;align-items:start}
+@media(max-width:700px){.germ-layout{grid-template-columns:1fr}}
+
+.organ-pool{
+  border:2px dashed var(--border);border-radius:8px;padding:10px;
+  background:#f9fafb;min-height:300px;
+}
+.organ-chip{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 12px;margin:4px;border-radius:20px;
+  background:#fff;border:1.5px solid var(--border);
+  font-size:.82rem;font-weight:600;cursor:pointer;
+  transition:all .2s;user-select:none;
+}
+.organ-chip:hover{border-color:var(--oc2);background:#eef4fb}
+.organ-chip.selected{border-color:var(--am2);background:#fff8ec;color:var(--am);box-shadow:0 0 0 3px rgba(200,130,10,.25)}
+.organ-chip.placed-ecto{border-color:var(--ec);background:#eff6ff;color:var(--ec)}
+.organ-chip.placed-meso{border-color:var(--ms);background:#fff7ed;color:var(--ms)}
+.organ-chip.placed-endo{border-color:var(--en);background:#f0fdf4;color:var(--en)}
+.organ-chip.correct-chip{border-color:var(--ok)!important;background:#f0fdf4!important;color:var(--ok)!important}
+.organ-chip.wrong-chip{border-color:var(--ng)!important;background:#fef2f2!important;color:var(--ng)!important;animation:shake .4s}
+
+.germ-zones{display:flex;flex-direction:column;gap:12px}
+.germ-zone{
+  border:2px solid;border-radius:8px;padding:12px;min-height:100px;
+  transition:all .2s;cursor:pointer;
+}
+.germ-zone.drag-over{transform:scale(1.01);box-shadow:0 4px 16px rgba(0,0,0,.12)}
+.gz-ecto{border-color:#93c5fd;background:#eff6ff}
+.gz-meso{border-color:#fbbf24;background:#fffbeb}
+.gz-endo{border-color:#6ee7b7;background:#f0fdf4}
+.gz-hdr{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.gz-hdr h3{font-size:.92rem;font-weight:700}
+.gz-ecto .gz-hdr h3{color:var(--ec)}
+.gz-meso .gz-hdr h3{color:var(--ms)}
+.gz-endo .gz-hdr h3{color:var(--en)}
+.gz-subtitle{font-size:.72rem;color:var(--txt3);margin-left:auto}
+.gz-chips{display:flex;flex-wrap:wrap;gap:6px;min-height:32px}
+
+/* GERM DIAGRAM (after result) */
+.germ-diagram{
+  background:var(--card);border:1px solid var(--border);border-radius:8px;
+  padding:16px;margin-top:16px;display:none;
+}
+.germ-diagram.show{display:block}
+.gd-title{font-size:.9rem;font-weight:700;color:var(--oc);margin-bottom:12px;text-align:center}
+.gd-row{display:flex;gap:12px}
+.gd-col{flex:1;border-radius:6px;padding:10px 12px}
+.gd-col h4{font-size:.8rem;font-weight:700;margin-bottom:6px}
+.gd-ecto{background:#eff6ff}.gd-ecto h4{color:var(--ec)}
+.gd-meso{background:#fffbeb}.gd-meso h4{color:var(--ms)}
+.gd-endo{background:#f0fdf4}.gd-endo h4{color:var(--en)}
+.gd-col ul{list-style:none;font-size:.73rem;color:var(--txt2)}
+.gd-col ul li::before{content:'→ ';color:var(--txt3)}
+.gd-col ul li{padding:1px 0}
+
+/* OVERALL RESULT */
+.result-bar{
+  margin-top:14px;padding:12px 16px;border-radius:8px;font-size:.9rem;
+  font-weight:700;display:flex;align-items:center;gap:10px;
+  animation:fadeIn .4s;
+}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.result-bar.all-ok{background:#f0fdf4;color:var(--ok);border:1.5px solid #86efac}
+.result-bar.partial{background:#fffbeb;color:#92400e;border:1.5px solid #fbbf24}
+.result-bar.try-again{background:#fef2f2;color:var(--ng);border:1.5px solid #fca5a5}
+
+/* ─── FOOTER ─── */
+#ftr{text-align:center;padding:16px;font-size:.72rem;color:var(--txt3);border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <h1>🔬 発生クイズ — ウニ・カエルの発生と胚葉分化</h1>
+  <p>高校生物 第2章「発生と遺伝子発現の調節」 / 利尻バフンウニを題材に</p>
+</div>
+
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="showTab('uni')">🌊 ウニの発生</button>
+  <button class="tab-btn" onclick="showTab('frog')">🐸 カエルの発生</button>
+  <button class="tab-btn" onclick="showTab('germ')">🧬 胚葉の分化</button>
+</div>
+
+<div id="tab-uni" class="tab-pane active">
+  <div class="qhdr">
+    <div class="qhdr-icon">🌊</div>
+    <div>
+      <h2>ウニの発生段階を正しい順に並べよう</h2>
+      <p>左のカードをクリックして選択し，右の①〜⑧のスロットにクリックで配置しよう。<br>
+      バフンウニは<strong>等割</strong>をするため，割球の大きさがほぼ均一になる。</p>
+    </div>
+  </div>
+  <div class="sort-layout">
+    <div>
+      <div class="zone-label">📦 カードを並べよう</div>
+      <div class="cards-pool" id="uni-pool"></div>
+    </div>
+    <div>
+      <div class="zone-label">✅ 正しい順番に配置</div>
+      <div class="slots-area" id="uni-slots"></div>
+    </div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="checkSort('uni')">答え合わせ</button>
+    <button class="btn btn-ghost" onclick="resetSort('uni')">リセット</button>
+    <div class="score-box" id="uni-score"></div>
+  </div>
+  <div id="uni-result"></div>
+</div>
+
+<div id="tab-frog" class="tab-pane">
+  <div class="qhdr">
+    <div class="qhdr-icon">🐸</div>
+    <div>
+      <h2>カエルの発生段階を正しい順に並べよう</h2>
+      <p>カエルの卵は<strong>不等割</strong>をする。動物極（上・暗色）の割球は小さく，植物極（下・淡色）の割球は大きいのが特徴。</p>
+    </div>
+  </div>
+  <div class="sort-layout">
+    <div>
+      <div class="zone-label">📦 カードを並べよう</div>
+      <div class="cards-pool" id="frog-pool"></div>
+    </div>
+    <div>
+      <div class="zone-label">✅ 正しい順番に配置</div>
+      <div class="slots-area" id="frog-slots"></div>
+    </div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="checkSort('frog')">答え合わせ</button>
+    <button class="btn btn-ghost" onclick="resetSort('frog')">リセット</button>
+    <div class="score-box" id="frog-score"></div>
+  </div>
+  <div id="frog-result"></div>
+</div>
+
+<div id="tab-germ" class="tab-pane">
+  <div class="qhdr">
+    <div class="qhdr-icon">🧬</div>
+    <div>
+      <h2>器官を正しい胚葉に分類しよう</h2>
+      <p>左の器官・組織をクリックして選択し，正しい胚葉のゾーンをクリックして配置しよう。</p>
+    </div>
+  </div>
+  <div class="germ-layout">
+    <div>
+      <div class="zone-label">📦 器官リスト</div>
+      <div class="organ-pool" id="organ-pool"></div>
+    </div>
+    <div class="germ-zones">
+      <div class="germ-zone gz-ecto" id="zone-ecto" onclick="placeToZone('ecto')">
+        <div class="gz-hdr">
+          <h3>外胚葉（がいはいよう）</h3>
+          <span class="gz-subtitle">ectoderm</span>
+        </div>
+        <div class="gz-chips" id="chips-ecto"></div>
+      </div>
+      <div class="germ-zone gz-meso" id="zone-meso" onclick="placeToZone('meso')">
+        <div class="gz-hdr">
+          <h3>中胚葉（ちゅうはいよう）</h3>
+          <span class="gz-subtitle">mesoderm</span>
+        </div>
+        <div class="gz-chips" id="chips-meso"></div>
+      </div>
+      <div class="germ-zone gz-endo" id="zone-endo" onclick="placeToZone('endo')">
+        <div class="gz-hdr">
+          <h3>内胚葉（ないはいよう）</h3>
+          <span class="gz-subtitle">endoderm</span>
+        </div>
+        <div class="gz-chips" id="chips-endo"></div>
+      </div>
+    </div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="checkGerm()">答え合わせ</button>
+    <button class="btn btn-ghost" onclick="resetGerm()">リセット</button>
+    <div class="score-box" id="germ-score"></div>
+  </div>
+  <div id="germ-result"></div>
+  <div class="germ-diagram" id="germ-diagram">
+    <div class="gd-title">📋 胚葉と分化する器官・組織（参考まとめ）</div>
+    <div class="gd-row">
+      <div class="gd-col gd-ecto">
+        <h4>🔵 外胚葉</h4>
+        <ul>
+          <li>表皮・皮膚</li><li>神経管（脳・脊髄・神経）</li>
+          <li>感覚器（眼レンズ・耳の感覚細胞）</li>
+          <li>歯のエナメル質</li><li>汗腺・爪・毛</li>
+        </ul>
+      </div>
+      <div class="gd-col gd-meso">
+        <h4>🟡 中胚葉</h4>
+        <ul>
+          <li>骨格筋・心筋</li><li>骨・軟骨・真皮</li>
+          <li>心臓・血管・血球</li>
+          <li>腎臓・尿管</li><li>生殖腺（卵巣・精巣）</li>
+        </ul>
+      </div>
+      <div class="gd-col gd-endo">
+        <h4>🟢 内胚葉</h4>
+        <ul>
+          <li>消化管の内壁（食道・胃・腸）</li>
+          <li>肝臓・膵臓</li>
+          <li>肺・気管支</li>
+          <li>甲状腺・副甲状腺</li>
+          <li>膀胱の内壁</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="ftr">HIGH SCHOOL BIOLOGY — 発生クイズ © 2026</div>
+
+<script>
+'use strict';
+
+// ════════════════════════════════════════════════════════
+// SVG ILLUSTRATIONS
+// ════════════════════════════════════════════════════════
+
+const C = { // cell colors
+  uni:'#f2e8c0', uniD:'#5a4530', uniN:'#d4a830',
+  ani:'#3a2820', veg:'#f0e090', sea:'#c8e8f8',
+  neu:'#8090b0', mus:'#c86060',
+};
+
+function uniSVG(stage){
+  const w=80, cx=40, cy=40, r=34;
+  const base = (content,extra='') =>
+    `<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" ${extra}>${content}</svg>`;
+
+  if(stage===1){ // 受精卵
+    return base(`
+      <circle cx="${cx}" cy="${cy}" r="${r+3}" fill="none" stroke="#c8b880" stroke-width="1" stroke-dasharray="3,2"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="${C.uni}" stroke="${C.uniD}" stroke-width="2"/>
+      <circle cx="${cx}" cy="${cy}" r="8" fill="${C.uniN}" stroke="#a08030" stroke-width="1.5"/>
+      <circle cx="${cx}" cy="${cy}" r="3" fill="#fff" opacity=".5"/>
+    `);
+  }
+  if(stage===2){ // 2細胞期
+    return base(`
+      <ellipse cx="${cx}" cy="${cy}" rx="${r+2}" ry="${r+2}" fill="none" stroke="#c8b880" stroke-width="1" stroke-dasharray="3,2"/>
+      <path d="M ${cx} ${cy-r} A ${r} ${r} 0 0 0 ${cx} ${cy+r} Z" fill="${C.uni}" stroke="${C.uniD}" stroke-width="2"/>
+      <path d="M ${cx} ${cy-r} A ${r} ${r} 0 0 1 ${cx} ${cy+r} Z" fill="#ede2b5" stroke="${C.uniD}" stroke-width="2"/>
+      <line x1="${cx}" y1="${cy-r}" x2="${cx}" y2="${cy+r}" stroke="${C.uniD}" stroke-width="1.5"/>
+    `);
+  }
+  if(stage===3){ // 4細胞期
+    const hr=r*0.95;
+    return base(`
+      <circle cx="${cx}" cy="${cy}" r="${hr+2}" fill="none" stroke="#c8b880" stroke-width="1" stroke-dasharray="3,2"/>
+      <path d="M ${cx} ${cy-hr} A ${hr} ${hr} 0 0 0 ${cx-hr} ${cy} L ${cx} ${cy} Z" fill="${C.uni}" stroke="${C.uniD}" stroke-width="1.5"/>
+      <path d="M ${cx} ${cy-hr} A ${hr} ${hr} 0 0 1 ${cx+hr} ${cy} L ${cx} ${cy} Z" fill="#ede2b5" stroke="${C.uniD}" stroke-width="1.5"/>
+      <path d="M ${cx-hr} ${cy} A ${hr} ${hr} 0 0 0 ${cx} ${cy+hr} L ${cx} ${cy} Z" fill="#e8dcae" stroke="${C.uniD}" stroke-width="1.5"/>
+      <path d="M ${cx+hr} ${cy} A ${hr} ${hr} 0 0 1 ${cx} ${cy+hr} L ${cx} ${cy} Z" fill="${C.uni}" stroke="${C.uniD}" stroke-width="1.5"/>
+      <line x1="${cx}" y1="${cy-hr}" x2="${cx}" y2="${cy+hr}" stroke="${C.uniD}" stroke-width="1.5"/>
+      <line x1="${cx-hr}" y1="${cy}" x2="${cx+hr}" y2="${cy}" stroke="${C.uniD}" stroke-width="1.5"/>
+    `);
+  }
+  if(stage===4){ // 8細胞期 (side view, 2 tiers of 4)
+    const rr=14, sep=16;
+    const offsets=[-24,-8,8,24];
+    let s='';
+    offsets.forEach(x=>{
+      s+=`<ellipse cx="${cx+x}" cy="${cy-sep/2}" rx="${rr}" ry="${rr*0.55}" fill="${C.uni}" stroke="${C.uniD}" stroke-width="1.5"/>`;
+      s+=`<ellipse cx="${cx+x}" cy="${cy+sep/2}" rx="${rr}" ry="${rr*0.55}" fill="#ede2b5" stroke="${C.uniD}" stroke-width="1.5"/>`;
+    });
+    return base(s);
+  }
+  if(stage===5){ // 桑実胚
+    let s='<circle cx="40" cy="40" r="36" fill="#e8e0c8" stroke="none"/>';
+    const pts=[[27,20],[40,18],[53,21],[22,32],[36,30],[50,29],[63,31],[20,43],[33,41],[47,40],[60,43],[25,53],[38,52],[52,54],[32,62],[47,63]];
+    pts.forEach(([x,y])=>s+=`<circle cx="${x}" cy="${y}" r="8.5" fill="${C.uni}" stroke="${C.uniD}" stroke-width="1.2" opacity=".95"/>`);
+    return base(s);
+  }
+  if(stage===6){ // 胞胚
+    let s=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${C.sea}" stroke="${C.uniD}" stroke-width="2"/>`;
+    const n=14, ar=r-9;
+    for(let i=0;i<n;i++){
+      const a=i*Math.PI*2/n, x=cx+r*Math.cos(a), y=cy+r*Math.sin(a);
+      s+=`<ellipse cx="${x}" cy="${y}" rx="8" ry="5.5" fill="${C.uni}" stroke="${C.uniD}" stroke-width="1.2" transform="rotate(${i*360/n} ${x} ${y})"/>`;
+    }
+    s+=`<circle cx="${cx}" cy="${cy}" r="${ar-3}" fill="${C.sea}" stroke="none"/>`;
+    return base(s);
+  }
+  if(stage===7){ // 原腸胚
+    return base(`
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="${C.sea}" stroke="${C.uniD}" stroke-width="2"/>
+      <path d="M 40 74 Q 25 60 25 48 Q 25 35 40 30 Q 55 35 55 48 Q 55 60 40 74Z"
+            fill="${C.uni}" stroke="${C.uniD}" stroke-width="1.5"/>
+      <ellipse cx="40" cy="55" rx="10" ry="6" fill="#d8ecf8" stroke="${C.uniD}" stroke-width="1"/>
+      <path d="M 32 74 Q 30 68 33 63" fill="none" stroke="${C.uniD}" stroke-width="1.5" stroke-linecap="round"/>
+      <path d="M 48 74 Q 50 68 47 63" fill="none" stroke="${C.uniD}" stroke-width="1.5" stroke-linecap="round"/>
+      <text x="40" y="79" text-anchor="middle" font-size="7" fill="${C.uniD}">原口</text>
+    `);
+  }
+  if(stage===8){ // プルテウス幼生
+    return base(`
+      <polygon points="40,10 65,65 40,55 15,65" fill="${C.uni}" stroke="${C.uniD}" stroke-width="2"/>
+      <ellipse cx="40" cy="38" rx="10" ry="12" fill="#e0e8f8" stroke="${C.uniD}" stroke-width="1.2"/>
+      <line x1="15" y1="65" x2="5" y2="50" stroke="${C.uniD}" stroke-width="2" stroke-linecap="round"/>
+      <line x1="65" y1="65" x2="75" y2="50" stroke="${C.uniD}" stroke-width="2" stroke-linecap="round"/>
+      <line x1="15" y1="65" x2="8" y2="72" stroke="${C.uniD}" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="65" y1="65" x2="72" y2="72" stroke="${C.uniD}" stroke-width="1.5" stroke-linecap="round"/>
+      <text x="40" y="75" text-anchor="middle" font-size="6" fill="${C.uniD}">繊毛帯</text>
+    `);
+  }
+  return '';
+}
+
+function frogSVG(stage){
+  const cx=40, cy=40, r=34;
+  // Two-tone gradient helper: dark(animal) top, light(vegetal) bottom
+  const twoTone=(x,y,rx,ry,split=0.45)=>{
+    const id='g'+Math.random().toString(36).slice(2,6);
+    return `<defs><clipPath id="t${id}"><ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}"/></clipPath></defs>
+      <ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${C.veg}" stroke="#5a4030" stroke-width="2"/>
+      <clipPath id="c${id}"><rect x="${x-rx}" y="${y-ry}" width="${rx*2}" height="${ry*ry*2*split}"/></clipPath>
+      <ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${C.ani}" stroke="none" clip-path="url(#c${id})"/>
+      <ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="none" stroke="#3a2820" stroke-width="2"/>`;
+  };
+
+  const base=(content)=>`<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">${content}</svg>`;
+
+  if(stage===1){ // 受精卵
+    return base(`
+      <defs><linearGradient id="fg1" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="45%" stop-color="${C.ani}"/>
+        <stop offset="45%" stop-color="${C.veg}"/>
+      </linearGradient></defs>
+      <circle cx="${cx}" cy="${cy}" r="${r+3}" fill="none" stroke="#c8b880" stroke-width="1" stroke-dasharray="3,2"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#fg1)" stroke="#3a2820" stroke-width="2"/>
+      <text x="40" y="30" text-anchor="middle" font-size="8" fill="#f0d880">動物極</text>
+      <text x="40" y="62" text-anchor="middle" font-size="8" fill="#5a4530">植物極</text>
+    `);
+  }
+  if(stage===2){ // 2細胞期
+    return base(`
+      <defs>
+        <linearGradient id="fg2a" x1="0" y1="0" x2="0" y2="1"><stop offset="45%" stop-color="${C.ani}"/><stop offset="45%" stop-color="${C.veg}"/></linearGradient>
+        <linearGradient id="fg2b" x1="0" y1="0" x2="0" y2="1"><stop offset="45%" stop-color="${C.ani}"/><stop offset="45%" stop-color="${C.veg}"/></linearGradient>
+      </defs>
+      <circle cx="${cx}" cy="${cy}" r="${r+2}" fill="none" stroke="#c8b880" stroke-width="1" stroke-dasharray="3,2"/>
+      <path d="M 40 6 A 34 34 0 0 0 40 74 Z" fill="url(#fg2a)" stroke="#3a2820" stroke-width="1.5"/>
+      <path d="M 40 6 A 34 34 0 0 1 40 74 Z" fill="url(#fg2b)" stroke="#3a2820" stroke-width="1.5"/>
+      <line x1="40" y1="6" x2="40" y2="74" stroke="#3a2820" stroke-width="1.5"/>
+    `);
+  }
+  if(stage===3){ // 8細胞期 side view - 4 small dark(animal) top + 4 large light(vegetal) bottom
+    let s='';
+    const aOff=[-22,-7,7,22], vOff=[-22,-7,7,22];
+    aOff.forEach(x=>s+=`<ellipse cx="${40+x}" cy="27" rx="9.5" ry="7" fill="${C.ani}" stroke="#3a2820" stroke-width="1.2"/>`);
+    vOff.forEach(x=>s+=`<ellipse cx="${40+x}" cy="50" rx="13" ry="10" fill="${C.veg}" stroke="#5a4030" stroke-width="1.5"/>`);
+    return base(`<text x="5" y="28" font-size="7" fill="${C.ani}">動物極</text><text x="5" y="65" font-size="7" fill="#6a5030">植物極</text>${s}`);
+  }
+  if(stage===4){ // 桑実胚 - asymmetric
+    let s=`<ellipse cx="40" cy="40" rx="36" ry="34" fill="${C.veg}" stroke="none"/>`;
+    // small dark cells (animal pole - top)
+    [[25,18],[35,14],[45,15],[55,19],[22,27],[32,23],[43,22],[53,25],[63,27]].forEach(([x,y])=>
+      s+=`<circle cx="${x}" cy="${y}" r="7" fill="${C.ani}" stroke="#3a2820" stroke-width="1"/>`);
+    // large light cells (vegetal pole - bottom)
+    [[22,48],[35,52],[50,52],[63,48],[28,63],[45,65],[60,62]].forEach(([x,y])=>
+      s+=`<circle cx="${x}" cy="${y}" r="10" fill="${C.veg}" stroke="#6a5030" stroke-width="1.2" opacity=".9"/>`);
+    s+=`<ellipse cx="40" cy="40" rx="36" ry="34" fill="none" stroke="#5a4030" stroke-width="2"/>`;
+    return base(s);
+  }
+  if(stage===5){ // 胞胚 - hollow, blastocoel at animal pole
+    return base(`
+      <defs><linearGradient id="fg5" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="40%" stop-color="${C.ani}"/><stop offset="40%" stop-color="${C.veg}"/>
+      </linearGradient></defs>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#fg5)" stroke="#3a2820" stroke-width="2"/>
+      <ellipse cx="40" cy="34" rx="16" ry="13" fill="${C.sea}" stroke="none" opacity=".9"/>
+      <text x="40" y="33" text-anchor="middle" font-size="7" fill="#1a5c7a">胚胞腔</text>
+      <text x="40" y="62" text-anchor="middle" font-size="7" fill="#6a5030">卵黄細胞</text>
+    `);
+  }
+  if(stage===6){ // 原腸胚 - blastopore visible
+    return base(`
+      <defs><linearGradient id="fg6" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="40%" stop-color="${C.ani}"/><stop offset="40%" stop-color="${C.veg}"/>
+      </linearGradient></defs>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#fg6)" stroke="#3a2820" stroke-width="2"/>
+      <path d="M 28 56 Q 40 68 52 56" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+      <ellipse cx="40" cy="60" rx="8" ry="5" fill="#c86040" stroke="#3a2820" stroke-width="1.5"/>
+      <text x="40" y="73" text-anchor="middle" font-size="7" fill="#9a3020">原口</text>
+    `);
+  }
+  if(stage===7){ // 神経胚 - elongated with neural groove
+    return base(`
+      <defs><linearGradient id="fg7" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="35%" stop-color="#9090c0"/><stop offset="35%" stop-color="${C.veg}"/>
+      </linearGradient></defs>
+      <ellipse cx="40" cy="42" rx="32" ry="24" fill="url(#fg7)" stroke="#3a2820" stroke-width="2"/>
+      <path d="M 18 36 Q 40 30 62 36" fill="none" stroke="#3a2820" stroke-width="2"/>
+      <path d="M 25 34 Q 40 27 55 34" fill="none" stroke="#6070a0" stroke-width="1.5" stroke-dasharray="2,2"/>
+      <text x="40" y="25" text-anchor="middle" font-size="7" fill="#4050a0">神経板</text>
+      <text x="40" y="58" text-anchor="middle" font-size="7" fill="#6a5030">脊索・体節</text>
+    `);
+  }
+  if(stage===8){ // オタマジャクシ
+    return base(`
+      <ellipse cx="32" cy="42" rx="22" ry="16" fill="${C.ani}" stroke="#2a1810" stroke-width="2"/>
+      <path d="M 54 42 Q 68 32 76 38 Q 72 42 76 46 Q 68 52 54 42Z" fill="${C.ani}" stroke="#2a1810" stroke-width="1.5"/>
+      <circle cx="24" cy="38" r="4" fill="${C.sea}" stroke="#2a1810" stroke-width="1"/>
+      <ellipse cx="32" cy="44" rx="10" ry="7" fill="none" stroke="${C.veg}" stroke-width="1" opacity=".5"/>
+      <text x="32" y="65" text-anchor="middle" font-size="7" fill="#2a1810">えら・心臓</text>
+    `);
+  }
+  return '';
+}
+
+// ════════════════════════════════════════════════════════
+// QUIZ DATA
+// ════════════════════════════════════════════════════════
+
+const STAGES = {
+  uni: [
+    {id:'u1',order:1,name:'受精卵',hint:'受精直後・2n'},
+    {id:'u2',order:2,name:'2細胞期',hint:'第1卵割・等割'},
+    {id:'u3',order:3,name:'4細胞期',hint:'第2卵割'},
+    {id:'u4',order:4,name:'8細胞期',hint:'第3卵割'},
+    {id:'u5',order:5,name:'桑実胚',hint:'固体球状胚'},
+    {id:'u6',order:6,name:'胞胚',hint:'卵割腔が形成'},
+    {id:'u7',order:7,name:'原腸胚',hint:'原口から陥入'},
+    {id:'u8',order:8,name:'プルテウス幼生',hint:'繊毛で遊泳'},
+  ],
+  frog: [
+    {id:'f1',order:1,name:'受精卵',hint:'動物極（暗）・植物極（淡）'},
+    {id:'f2',order:2,name:'2細胞期',hint:'第1卵割・不等割'},
+    {id:'f3',order:3,name:'8細胞期',hint:'上：小さい・下：大きい割球'},
+    {id:'f4',order:4,name:'桑実胚',hint:'割球の大きさに差あり'},
+    {id:'f5',order:5,name:'胞胚',hint:'胚胞腔が動物極側に偏る'},
+    {id:'f6',order:6,name:'原腸胚',hint:'原口が形成・3胚葉が分かれる'},
+    {id:'f7',order:7,name:'神経胚',hint:'神経板→神経管が形成'},
+    {id:'f8',order:8,name:'オタマジャクシ',hint:'えら・尾・心臓が出現'},
+  ],
+};
+
+const GERM = {
+  ecto: ['表皮・皮膚','神経管（脳・脊髄）','感覚器（眼レンズ・耳）','歯のエナメル質','汗腺・爪'],
+  meso: ['骨格筋','骨・軟骨','心臓・血管','腎臓','生殖腺（卵巣・精巣）'],
+  endo: ['消化管の内壁','肝臓','膵臓','肺・気管支','甲状腺'],
+};
+
+// ════════════════════════════════════════════════════════
+// SORT QUIZ STATE
+// ════════════════════════════════════════════════════════
+
+const sortState = {
+  uni: { selected: null, slots: Array(8).fill(null), pool: [] },
+  frog: { selected: null, slots: Array(8).fill(null), pool: [] },
+};
+
+function getSVG(type, order){
+  return type==='uni' ? uniSVG(order) : frogSVG(order);
+}
+
+function shuffle(arr){ return arr.sort(()=>Math.random()-.5) }
+
+function buildSortQuiz(type){
+  const st = sortState[type];
+  const pool = document.getElementById(`${type}-pool`);
+  const slotsEl = document.getElementById(`${type}-slots`);
+  pool.innerHTML = slotsEl.innerHTML = '';
+  st.selected = null;
+  st.slots = Array(8).fill(null);
+  st.pool = shuffle([...STAGES[type]]);
+
+  // Build pool cards
+  st.pool.forEach(s=>{
+    pool.appendChild(makeCard(type, s, 'pool'));
+  });
+
+  // Build slots
+  for(let i=0;i<8;i++){
+    const slot = document.createElement('div');
+    slot.className = 'slot';
+    slot.id = `slot-${type}-${i}`;
+    slot.innerHTML = `<div class="slot-num">第 ${i+1} 段階</div><div class="slot-hint">クリックで配置</div>`;
+    slot.addEventListener('click', ()=>handleSlotClick(type, i));
+    slotsEl.appendChild(slot);
+  }
+  document.getElementById(`${type}-score`).classList.remove('show');
+  document.getElementById(`${type}-result`).innerHTML = '';
+}
+
+function makeCard(type, stageData, location){
+  const card = document.createElement('div');
+  card.className = 'stage-card';
+  card.id = `card-${stageData.id}`;
+  card.dataset.id = stageData.id;
+  card.dataset.order = stageData.order;
+  card.dataset.type = type;
+  card.innerHTML = `${getSVG(type, stageData.order)}<div class="cname">${stageData.name}</div><div class="chint">${stageData.hint}</div>`;
+  card.addEventListener('click', ()=>handleCardClick(type, stageData.id));
+  return card;
+}
+
+function handleCardClick(type, cardId){
+  const st = sortState[type];
+  // クリックした自分自身 → 選択解除
+  if(st.selected === cardId){ st.selected = null; updateSelection(type); return; }
+
+  const slotIdx   = st.slots.indexOf(cardId);     // クリックしたカードのスロット位置
+  const selInSlot = st.slots.indexOf(st.selected); // 選択中カードのスロット位置
+
+  if(st.selected){
+    if(slotIdx >= 0){
+      // クリックしたカードがスロットにある
+      if(selInSlot >= 0){
+        // 両方スロット → 入れ替え
+        st.slots[slotIdx]   = st.selected;
+        st.slots[selInSlot] = cardId;
+      } else {
+        // 選択中はプール、クリックはスロット → スロットに移動（押し出されたカードはrenderPoolでプールへ）
+        st.slots[slotIdx] = st.selected;
+      }
+      st.selected = null;
+      updateSelection(type);
+      renderSlots(type);
+      renderPool(type);  // プール再描画（押し出されたカード含む）
+    } else {
+      // クリックしたカードもプールにある → 選択を切り替えるだけ
+      st.selected = cardId;
+      updateSelection(type);
+    }
+    return;
+  }
+  // 何も選択していない → このカードを選択
+  st.selected = cardId;
+  updateSelection(type);
+}
+
+function handleSlotClick(type, slotIdx){
+  const st = sortState[type];
+  if(!st.selected) return;
+  // Place selected card into this slot
+  const selId = st.selected;
+  const prevInSlot = st.slots[slotIdx];
+  // Remove selected from its current slot (if in a slot)
+  const selSlot = st.slots.indexOf(selId);
+  if(selSlot >= 0) st.slots[selSlot] = prevInSlot; // put displaced card back in prev slot
+  else if(prevInSlot){ /* prevInSlot goes back to pool - handled in render */ }
+  st.slots[slotIdx] = selId;
+  st.selected = null;
+  updateSelection(type);
+  renderSlots(type);
+  renderPool(type);
+}
+
+function updateSelection(type){
+  document.querySelectorAll('.stage-card').forEach(c=>{
+    c.classList.toggle('selected', c.dataset.id === sortState[type].selected);
+  });
+}
+
+function renderSlots(type){
+  const st = sortState[type];
+  for(let i=0;i<8;i++){
+    const slot = document.getElementById(`slot-${type}-${i}`);
+    const cardId = st.slots[i];
+    slot.innerHTML = '';
+    slot.classList.remove('has-card','correct','wrong');
+    if(cardId){
+      slot.classList.add('has-card');
+      const sd = STAGES[type].find(s=>s.id===cardId);
+      slot.appendChild(makeCard(type, sd, 'slot'));
+    } else {
+      slot.innerHTML = `<div class="slot-num">第 ${i+1} 段階</div><div class="slot-hint">クリックで配置</div>`;
+    }
+  }
+}
+
+function renderPool(type){
+  const st = sortState[type];
+  const pool = document.getElementById(`${type}-pool`);
+  pool.innerHTML = '';
+  const placedIds = st.slots.filter(Boolean);
+  STAGES[type].forEach(s=>{
+    if(!placedIds.includes(s.id)){
+      pool.appendChild(makeCard(type, s, 'pool'));
+    }
+  });
+}
+
+function checkSort(type){
+  const st = sortState[type];
+  let correct = 0;
+  for(let i=0;i<8;i++){
+    const slot = document.getElementById(`slot-${type}-${i}`);
+    const cardId = st.slots[i];
+    if(!cardId){ slot.classList.add('wrong'); continue; }
+    const sd = STAGES[type].find(s=>s.id===cardId);
+    const isOk = sd.order === i+1;
+    slot.classList.toggle('correct', isOk);
+    slot.classList.toggle('wrong', !isOk);
+    if(isOk){
+      correct++;
+      const badge = document.createElement('div');
+      badge.className = 'cbadge ok'; badge.textContent = '✓';
+      slot.querySelector('.stage-card')?.appendChild(badge);
+    } else {
+      const badge = document.createElement('div');
+      badge.className = 'cbadge ng'; badge.textContent = '✗';
+      slot.querySelector('.stage-card')?.appendChild(badge);
+    }
+  }
+  const scoreEl = document.getElementById(`${type}-score`);
+  scoreEl.textContent = `${correct} / 8 正解`;
+  scoreEl.className = `score-box show ${correct<8?'wrong-score':''}`;
+  const resultEl = document.getElementById(`${type}-result`);
+  const pct = correct/8;
+  const cls = pct===1?'all-ok':pct>=0.6?'partial':'try-again';
+  const msg = pct===1?'🎉 全問正解！完璧です！':pct>=0.6?`⭐ ${correct}問正解。惜しい！順番を確認しよう。`:'💪 もう一度挑戦！発生の段階をよく確認してみよう。';
+  resultEl.innerHTML = `<div class="result-bar ${cls}">${msg}</div>`;
+}
+
+function resetSort(type){
+  buildSortQuiz(type);
+}
+
+// ════════════════════════════════════════════════════════
+// GERM LAYER QUIZ
+// ════════════════════════════════════════════════════════
+
+let germSelected = null;
+const germState = {}; // orgName → 'ecto'|'meso'|'endo'
+
+function buildGermQuiz(){
+  germSelected = null;
+  Object.keys(germState).forEach(k=>delete germState[k]);
+  const pool = document.getElementById('organ-pool');
+  pool.innerHTML = '';
+  ['ecto','meso','endo'].forEach(z=>{ document.getElementById(`chips-${z}`).innerHTML=''; });
+  document.getElementById('germ-score').classList.remove('show');
+  document.getElementById('germ-result').innerHTML = '';
+  document.getElementById('germ-diagram').classList.remove('show');
+
+  const all = [
+    ...GERM.ecto.map(n=>({name:n,zone:'ecto'})),
+    ...GERM.meso.map(n=>({name:n,zone:'meso'})),
+    ...GERM.endo.map(n=>({name:n,zone:'endo'})),
+  ];
+  shuffle(all).forEach(item=>{
+    const chip = makeChip(item.name, item.zone, 'pool');
+    pool.appendChild(chip);
+  });
+}
+
+function makeChip(name, correctZone, location){
+  const chip = document.createElement('span');
+  chip.className = 'organ-chip';
+  chip.dataset.name = name;
+  chip.dataset.correct = correctZone;
+  chip.dataset.loc = location;
+  chip.textContent = name;
+  chip.addEventListener('click', ()=>handleChipClick(name));
+  return chip;
+}
+
+function handleChipClick(name){
+  if(germSelected === name){ germSelected = null; updateChipSelection(); return; }
+  germSelected = name;
+  updateChipSelection();
+}
+
+function placeToZone(zone){
+  if(!germSelected) return;
+  const name = germSelected;
+  const chip = document.querySelector(`.organ-chip[data-name="${CSS.escape(name)}"]`);
+  if(!chip) return;
+
+  // Remove from current location
+  chip.remove();
+  germState[name] = zone;
+
+  // Add to zone (returnChipToPool ハンドラのみ付与。makeChip は使わない)
+  const zoneChips = document.getElementById(`chips-${zone}`);
+  const newChip = document.createElement('span');
+  newChip.className = `organ-chip placed-${zone}`;
+  newChip.dataset.name = name;
+  newChip.dataset.correct = chip.dataset.correct;
+  newChip.dataset.loc = zone;
+  newChip.textContent = name;
+  newChip.title = 'クリックでプールに戻す';
+  newChip.addEventListener('click', ()=>returnChipToPool(name));
+  zoneChips.appendChild(newChip);
+
+  germSelected = null;
+  updateChipSelection();
+}
+
+function returnChipToPool(name){
+  const chip = document.querySelector(`.organ-chip[data-name="${CSS.escape(name)}"]`);
+  if(!chip) return;
+  const correctZone = chip.dataset.correct;
+  chip.remove();
+  delete germState[name];
+  const pool = document.getElementById('organ-pool');
+  const newChip = makeChip(name, correctZone, 'pool');
+  pool.appendChild(newChip);
+}
+
+function updateChipSelection(){
+  document.querySelectorAll('.organ-chip').forEach(c=>{
+    if(c.dataset.loc === 'pool'){
+      c.classList.toggle('selected', c.dataset.name === germSelected);
+    }
+  });
+}
+
+function checkGerm(){
+  let correct = 0, total = 0;
+  ['ecto','meso','endo'].forEach(zone=>{
+    GERM[zone].forEach(name=>{
+      total++;
+      const chip = document.querySelector(`.organ-chip[data-name="${CSS.escape(name)}"]`);
+      if(!chip){ return; }
+      const placed = germState[name];
+      if(placed === zone){
+        chip.className = 'organ-chip correct-chip';
+        correct++;
+      } else {
+        chip.className = 'organ-chip wrong-chip';
+        chip.title = `正解: ${zone==='ecto'?'外胚葉':zone==='meso'?'中胚葉':'内胚葉'}`;
+      }
+    });
+  });
+  // 未配置チップ（プールに残ったもの）にも正解表示を付与（totalには加算しない）
+  document.querySelectorAll('#organ-pool .organ-chip').forEach(c=>{
+    c.className = 'organ-chip wrong-chip';
+    c.title = `正解: ${c.dataset.correct==='ecto'?'外胚葉':c.dataset.correct==='meso'?'中胚葉':'内胚葉'}`;
+    // total++ は不要（最初のループで既にカウント済み）
+  });
+
+  const scoreEl = document.getElementById('germ-score');
+  scoreEl.textContent = `${correct} / ${total} 正解`;
+  scoreEl.className = `score-box show ${correct<total?'wrong-score':''}`;
+
+  const pct = correct/total;
+  const cls = pct===1?'all-ok':pct>=0.6?'partial':'try-again';
+  const msg = pct===1?'🎉 全問正解！胚葉をマスターしました！':pct>=0.6?`⭐ ${correct}/${total}問正解。惜しい！`:' 💪 もう一度！胚葉の表を確認してみよう。';
+  document.getElementById('germ-result').innerHTML = `<div class="result-bar ${cls}">${msg}</div>`;
+  document.getElementById('germ-diagram').classList.add('show');
+}
+
+function resetGerm(){ buildGermQuiz(); }
+
+// ════════════════════════════════════════════════════════
+// TAB NAVIGATION
+// ════════════════════════════════════════════════════════
+
+function showTab(tab){
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  document.querySelector(`[onclick="showTab('${tab}')"]`).classList.add('active');
+}
+
+// ════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════
+
+window.addEventListener('DOMContentLoaded', ()=>{
+  buildSortQuiz('uni');
+  buildSortQuiz('frog');
+  buildGermQuiz();
+});
+</script>
+</body>
+</html>
