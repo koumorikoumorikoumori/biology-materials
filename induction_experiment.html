@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>予定運命と誘導 ― フォークトとシュペーマンの実験</title>
+<style>
+:root{
+  --bg:#0c1d23;--bg2:#11242d;--panel:#173039;--panel2:#1d3b47;
+  --line:rgba(255,255,255,.1);--line2:rgba(255,255,255,.18);
+  --ink:#e6efeb;--sub:#7ca99d;--sub2:#5d8a7f;
+  --epi:#5aa0d4;--neu:#edbb45;--noto:#dc6044;--meso:#74ad5c;--endo:#9a72bd;--org:#ef5235;
+  --ok:#74ad5c;--ng:#ef5235;
+  --f:"Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",sans-serif;
+  --shadow:0 8px 30px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+html,body{min-height:100%;background:var(--bg);color:var(--ink);font-family:var(--f);}
+body{display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;}
+
+/* ── header ── */
+header{padding:22px 20px 0;text-align:center;flex-shrink:0;}
+header h1{font-size:1.18rem;font-weight:700;letter-spacing:.04em;}
+header p{font-size:.78rem;color:var(--sub);margin-top:4px;letter-spacing:.05em;}
+
+/* ── progress dots ── */
+.prog{display:flex;justify-content:center;gap:6px;margin-top:14px;}
+.prog i{width:7px;height:7px;border-radius:50%;background:var(--line2);transition:background .3s,transform .3s;}
+.prog i.done{background:var(--ok);}
+.prog i.cur{background:var(--org);transform:scale(1.35);}
+
+/* ── nav ── */
+nav{display:flex;justify-content:center;gap:6px;padding:14px 16px 16px;flex-wrap:wrap;flex-shrink:0;}
+nav button{background:transparent;border:1px solid var(--line);color:var(--sub);
+  border-radius:9px;padding:8px 18px;font-family:var(--f);font-size:.82rem;cursor:pointer;
+  transition:background .18s,color .18s,border-color .18s;position:relative;}
+nav button:hover{color:var(--ink);border-color:var(--line2);}
+nav button.on{background:var(--org);border-color:var(--org);color:#fff;font-weight:700;}
+nav button .chk{margin-left:6px;color:var(--ok);font-size:.9em;}
+nav button.on .chk{color:#fff;}
+
+/* ── sections ── */
+.sec{display:none;flex:1;padding:4px 20px 48px;max-width:980px;width:100%;margin:0 auto;animation:fade .4s ease;}
+.sec.show{display:flex;flex-direction:column;gap:16px;}
+@keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+.sec-title{font-size:.74rem;color:var(--sub2);letter-spacing:.16em;font-weight:600;}
+.sec-lead{font-size:.92rem;color:var(--ink);line-height:1.7;}
+.sec-lead b{color:var(--neu);}
+
+/* ── layout ── */
+.row{display:grid;grid-template-columns:1fr 320px;gap:18px;align-items:start;}
+@media(max-width:720px){.row{grid-template-columns:1fr;}}
+
+/* ── viewport ── */
+.vp{background:radial-gradient(135% 145% at 50% 18%,var(--bg2),var(--bg) 74%);
+  border-radius:16px;border:1px solid var(--line);padding:12px;position:relative;
+  user-select:none;box-shadow:var(--shadow);}
+.vp svg{display:block;width:100%;height:auto;touch-action:none;}
+.vp .phase{position:absolute;top:12px;left:16px;font-size:.68rem;letter-spacing:.18em;
+  color:var(--sub2);font-weight:600;pointer-events:none;}
+
+/* ── side ── */
+.side{display:flex;flex-direction:column;gap:11px;}
+.msg{background:var(--panel);border-radius:11px;padding:14px 16px;font-size:.88rem;
+  line-height:1.65;border-left:3px solid var(--line2);min-height:60px;transition:border-color .25s;}
+.msg.ok{border-left-color:var(--ok);}
+.msg.ng{border-left-color:var(--ng);}
+.msg.info{border-left-color:var(--neu);}
+.msg b{font-weight:700;}
+.summary{background:linear-gradient(180deg,var(--panel2),var(--panel));border-radius:11px;
+  padding:13px 16px;font-size:.82rem;line-height:1.7;color:var(--sub);
+  border:1px solid var(--line);display:none;}
+.summary.show{display:block;animation:fade .35s ease;}
+.summary b{color:var(--ink);}
+
+.btns{display:flex;gap:8px;flex-wrap:wrap;}
+button.go{background:var(--ink);color:var(--bg);border:none;border-radius:9px;padding:10px 18px;
+  font-family:var(--f);font-size:.86rem;font-weight:700;cursor:pointer;transition:opacity .15s,transform .1s;}
+button.go:disabled{opacity:.28;cursor:default;}
+button.go:not(:disabled):hover{opacity:.88;}
+button.go:not(:disabled):active{transform:translateY(1px);}
+button.sub{background:transparent;color:var(--sub);border:1px solid var(--line);border-radius:9px;
+  padding:10px 14px;font-family:var(--f);font-size:.86rem;cursor:pointer;transition:color .15s;}
+button.sub:hover{color:var(--ink);}
+
+.toggle{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;width:fit-content;}
+.toggle button{background:transparent;border:none;color:var(--sub);padding:8px 16px;
+  font-family:var(--f);font-size:.83rem;cursor:pointer;transition:background .15s,color .15s;}
+.toggle button.on{background:rgba(255,255,255,.13);color:var(--ink);font-weight:700;}
+
+.hint{font-size:.75rem;color:var(--sub2);line-height:1.55;}
+
+/* ── legend / palette ── */
+.legend{display:flex;flex-wrap:wrap;gap:6px;}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:.76rem;color:var(--sub);
+  padding:5px 11px;border-radius:100px;border:1.5px solid var(--line);background:transparent;
+  cursor:pointer;transition:border-color .15s,color .15s,background .15s;font-family:var(--f);}
+.chip:hover{color:var(--ink);}
+.chip.sel{color:var(--ink);background:rgba(255,255,255,.05);}
+.chip .dot{width:11px;height:11px;border-radius:3px;flex:none;}
+
+/* ── trial tracker ── */
+.trials{display:flex;flex-wrap:wrap;gap:5px;}
+.trial{font-size:.68rem;padding:3px 9px;border-radius:100px;border:1px dashed var(--line2);
+  color:var(--sub2);transition:all .2s;}
+.trial.hit{border-style:solid;border-color:var(--ok);color:var(--ok);background:rgba(116,173,92,.12);}
+
+/* ── quiz ── */
+.qhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.qscore{font-size:.82rem;color:var(--sub);}
+.qscore b{color:var(--neu);font-size:1.05rem;}
+.qblock{margin-bottom:18px;background:var(--panel);border:1px solid var(--line);
+  border-radius:12px;padding:15px 16px;max-width:560px;}
+.qblock p{font-size:.9rem;font-weight:600;margin-bottom:10px;}
+.qblock button{display:block;width:100%;text-align:left;background:var(--bg2);
+  border:1px solid var(--line);border-radius:8px;color:var(--sub);padding:10px 13px;margin:5px 0;
+  font-family:var(--f);font-size:.85rem;cursor:pointer;transition:all .14s;}
+.qblock button:hover:not(:disabled){color:var(--ink);border-color:var(--line2);}
+.qblock button.ok{background:rgba(116,173,92,.2);border-color:var(--ok);color:#b3dd9d;}
+.qblock button.ng{background:rgba(239,82,53,.16);border-color:var(--ng);color:#f6a392;}
+.qfb{font-size:.78rem;color:var(--sub);margin-top:7px;min-height:1em;line-height:1.6;}
+.qdone{font-size:.9rem;color:var(--ok);font-weight:700;padding:10px 0;display:none;}
+.qdone.show{display:block;animation:fade .4s;}
+
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;}html{scroll-behavior:auto;}}
+</style>
+</head>
+<body>
+<header>
+  <h1>予定運命と誘導</h1>
+  <p>フォークトとシュペーマンの実験を、動かして確かめる</p>
+  <div class="prog" id="prog"><i class="cur"></i><i></i><i></i><i></i></div>
+</header>
+<nav id="nav">
+  <button class="on" data-s="s1" data-i="0">壱 予定運命図</button>
+  <button data-s="s2" data-i="1">弐 運命の決定</button>
+  <button data-s="s3" data-i="2">参 形成体と誘導</button>
+  <button data-s="s4" data-i="3">四 クイズ</button>
+</nav>
+
+<!-- ===== S1 ===== -->
+<section class="sec show" id="s1">
+  <div class="sec-title">VOGT 1925 ― 局所生体染色法</div>
+  <p class="sec-lead">フォークトは生きた胚の表面を色素で染め、その印が<b>どの器官になるか</b>を追いました。染料を塗って「発生」させてみましょう。</p>
+  <div class="row">
+    <div class="vp"><span class="phase" id="map-phase">原腸胚</span><svg id="map-svg" viewBox="0 0 340 350"></svg></div>
+    <div class="side">
+      <div class="legend" id="map-leg"></div>
+      <div class="msg info" id="map-msg">染料を選び、胚の領域をクリックして染色しよう。</div>
+      <div class="btns">
+        <button class="go" id="map-dev">発生させる →</button>
+        <button class="sub" id="map-rst">リセット</button>
+      </div>
+      <div class="hint">💡 染料を選んで領域をクリック／もう一度クリックで消去。複数染めてから発生させると対応がよくわかります。</div>
+      <div class="summary" id="map-sum"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== S2 ===== -->
+<section class="sec" id="s2">
+  <div class="sec-title">SPEMANN ― 交換移植実験</div>
+  <p class="sec-lead">予定表皮の小片を、発生段階を変えて<b>予定神経の位置</b>へ移植します。運命が<b>いつ決まるか</b>を調べましょう。</p>
+  <div class="row">
+    <div class="vp"><span class="phase" id="det-phase">移植前</span><svg id="det-svg" viewBox="0 0 340 362"></svg></div>
+    <div class="side">
+      <div class="toggle" id="det-tog">
+        <button class="on" data-v="early">初期原腸胚</button>
+        <button data-v="late">後期原腸胚</button>
+      </div>
+      <div class="msg info" id="det-msg">小片（■）を胚の好きな場所へドラッグしよう。</div>
+      <div class="btns">
+        <button class="go" id="det-dev" disabled>発生させる →</button>
+        <button class="sub" id="det-rst">リセット</button>
+      </div>
+      <div class="hint">💡 4通り試そう：</div>
+      <div class="trials" id="det-trials"></div>
+      <div class="summary" id="det-sum"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== S3 ===== -->
+<section class="sec" id="s3">
+  <div class="sec-title">SPEMANN &amp; MANGOLD 1924 ― 原口背唇部の移植</div>
+  <p class="sec-lead">原口背唇部を別の胚に移植すると何が起きるか。<b>置く場所</b>を変えて確かめましょう。</p>
+  <div class="row">
+    <div class="vp"><span class="phase" id="org-phase">移植前</span><svg id="org-svg" viewBox="0 0 340 310"></svg></div>
+    <div class="side">
+      <div class="msg info" id="org-msg">赤い●（原口背唇部）を受容胚へドラッグしよう。</div>
+      <div class="btns">
+        <button class="go" id="org-dev" disabled>発生させる →</button>
+        <button class="sub" id="org-rst">リセット</button>
+      </div>
+      <div class="hint">💡 3か所試そう：</div>
+      <div class="trials" id="org-trials"></div>
+      <div class="summary" id="org-sum"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== S4 ===== -->
+<section class="sec" id="s4">
+  <div class="sec-title">確認クイズ</div>
+  <div class="qhead"><p class="sec-lead">3つの実験を振り返ろう。</p><span class="qscore" id="qscore">正解 <b>0</b> / 5</span></div>
+  <div id="quiz" style="max-width:560px;"></div>
+  <div class="qdone" id="qdone">🎉 全問終了！ お疲れさまでした。</div>
+</section>
+
+<script>
+"use strict";
+const NS="http://www.w3.org/2000/svg";
+const RM=window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+const C={epi:"#5aa0d4",neu:"#edbb45",noto:"#dc6044",meso:"#74ad5c",endo:"#9a72bd",org:"#ef5235"};
+
+function mk(tag,a,p){const e=document.createElementNS(NS,tag);if(a)for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e;}
+function polar(cx,cy,r,deg){const a=deg*Math.PI/180;return[cx+r*Math.cos(a),cy-r*Math.sin(a)];}
+function sector(cx,cy,rO,rI,a0,a1){
+  const lg=((a1-a0+360)%360)>180?1:0;
+  const[x0,y0]=polar(cx,cy,rO,a0),[x1,y1]=polar(cx,cy,rO,a1);
+  const[x2,y2]=polar(cx,cy,rI,a1),[x3,y3]=polar(cx,cy,rI,a0);
+  return `M${x0} ${y0}A${rO} ${rO} 0 ${lg} 0 ${x1} ${y1}L${x2} ${y2}A${rI} ${rI} 0 ${lg} 1 ${x3} ${y3}Z`;
+}
+function svgPt(svg,ex,ey){const pt=svg.createSVGPoint();pt.x=ex;pt.y=ey;return pt.matrixTransform(svg.getScreenCTM().inverse());}
+function inCircle(px,py,cx,cy,r){return (px-cx)**2+(py-cy)**2<=r*r;}
+function angle(px,py,cx,cy){let a=Math.atan2(-(py-cy),px-cx)*180/Math.PI;return (a+360)%360;}
+/* グループをふわっと出すアニメ */
+function pop(el,dur=420){
+  if(RM)return;
+  el.style.transformBox="fill-box";el.style.transformOrigin="center";
+  el.animate([{opacity:0,transform:"scale(.4)"},{opacity:1,transform:"scale(1)"}],
+    {duration:dur,easing:"cubic-bezier(.34,1.56,.64,1)",fill:"both"});
+}
+/* ドラッグ */
+function makeDraggable(el,svg,onDrop,onMove){
+  let ox,oy,sx,sy,drag=false;
+  function start(ex,ey){drag=true;const p=svgPt(svg,ex,ey);const t=el.transform.baseVal.consolidate();
+    sx=t?t.matrix.e:0;sy=t?t.matrix.f:0;ox=p.x-sx;oy=p.y-sy;el.style.cursor="grabbing";}
+  function move(ex,ey){if(!drag)return;const p=svgPt(svg,ex,ey);
+    const nx=p.x-ox,ny=p.y-oy;el.setAttribute("transform",`translate(${nx} ${ny})`);onMove&&onMove(p.x,p.y);}
+  function end(ex,ey){if(!drag)return;drag=false;el.style.cursor="grab";const p=svgPt(svg,ex,ey);onDrop&&onDrop(p.x,p.y);}
+  el.addEventListener("mousedown",e=>{e.preventDefault();start(e.clientX,e.clientY);});
+  el.addEventListener("touchstart",e=>{e.preventDefault();start(e.touches[0].clientX,e.touches[0].clientY);},{passive:false});
+  window.addEventListener("mousemove",e=>move(e.clientX,e.clientY));
+  window.addEventListener("touchmove",e=>{if(drag){e.preventDefault();move(e.touches[0].clientX,e.touches[0].clientY);}},{passive:false});
+  window.addEventListener("mouseup",e=>end(e.clientX,e.clientY));
+  window.addEventListener("touchend",e=>{if(drag)end(e.changedTouches[0].clientX,e.changedTouches[0].clientY);});
+  el.style.cursor="grab";
+}
+
+/* ── nav + progress ── */
+const visited=[true,false,false,false];
+function refreshProg(cur){
+  document.querySelectorAll("#prog i").forEach((d,i)=>{
+    d.className=(i===cur?"cur":(visited[i]?"done":""));
+  });
+}
+document.querySelectorAll("nav button").forEach(b=>{
+  b.addEventListener("click",()=>{
+    const i=+b.dataset.i;
+    document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));
+    document.querySelectorAll(".sec").forEach(x=>x.classList.remove("show"));
+    b.classList.add("on");
+    document.getElementById(b.dataset.s).classList.add("show");
+    visited[i]=true; refreshProg(i);
+    window.scrollTo({top:0,behavior:RM?"auto":"smooth"});
+  });
+});
+
+/* ================================================
+   壱: 予定運命図
+================================================ */
+(()=>{
+  const svg=document.getElementById("map-svg"),msg=document.getElementById("map-msg"),
+    leg=document.getElementById("map-leg"),phase=document.getElementById("map-phase"),
+    sum=document.getElementById("map-sum");
+  const cx=170,cy=180,rO=140,rI=84;
+  const REG=[
+    {k:"noto",name:"予定脊索",  col:C.noto,a0:4,  a1:46, organ:"脊索"},
+    {k:"neu", name:"予定神経",  col:C.neu, a0:46, a1:134,organ:"神経管"},
+    {k:"epi", name:"予定表皮",  col:C.epi, a0:134,a1:252,organ:"表皮"},
+    {k:"endo",name:"予定内胚葉",col:C.endo,a0:252,a1:316,organ:"内胚葉"},
+    {k:"meso",name:"予定中胚葉",col:C.meso,a0:316,a1:356,organ:"体節など"},
+  ];
+  let selected="neu";const painted={};let developed=false;
+
+  REG.forEach(r=>{
+    const c=document.createElement("button");
+    c.className="chip"+(r.k==="neu"?" sel":"");c.dataset.k=r.k;
+    c.style.borderColor=r.k==="neu"?r.col:"";
+    c.innerHTML=`<span class="dot" style="background:${r.col}"></span>${r.name}`;
+    c.onclick=()=>{selected=r.k;
+      leg.querySelectorAll(".chip").forEach(x=>{const on=x.dataset.k===r.k;x.classList.toggle("sel",on);x.style.borderColor=on?REG.find(z=>z.k===x.dataset.k).col:"";});
+      if(!developed)msg.innerHTML=`<b style="color:${r.col}">${r.name}</b>の染料を選択中。胚の領域をクリック。`;};
+    leg.appendChild(c);
+  });
+
+  function drawEmbryo(){
+    svg.innerHTML="";developed=false;phase.textContent="原腸胚";sum.classList.remove("show");
+    mk("circle",{cx,cy,r:rI,fill:"rgba(255,255,255,.03)",stroke:"rgba(255,255,255,.06)"},svg);
+    REG.forEach(r=>{
+      const p=mk("path",{d:sector(cx,cy,rO,rI,r.a0,r.a1),fill:painted[r.k]||"rgba(255,255,255,.07)",
+        stroke:"rgba(8,22,27,.55)","stroke-width":1,tabindex:0,role:"button","aria-label":r.name},svg);
+      p.style.cursor="pointer";p.dataset.k=r.k;
+      const toggle=()=>{
+        if(painted[r.k]===REG.find(x=>x.k===r.k).col)delete painted[r.k];
+        else painted[r.k]=REG.find(x=>x.k===selected).col;
+        drawEmbryo();
+        const n=Object.keys(painted).length;
+        msg.className="msg info";
+        msg.innerHTML=n===0?"染料を選び、胚の領域をクリックして染色しよう。":`<b>${n}</b>か所を染色。「発生させる」で観察しよう。`;
+      };
+      p.onclick=toggle;
+      p.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();toggle();}};
+    });
+    mk("text",{x:cx,y:cy-rO-12,"text-anchor":"middle","font-size":10,fill:"#5d8a7f"},svg).textContent="動物極";
+    mk("text",{x:cx,y:cy+rO+18,"text-anchor":"middle","font-size":10,fill:"#5d8a7f"},svg).textContent="植物極";
+    const[ox,oy]=polar(cx,cy,rO+3,25);
+    const m=mk("circle",{cx:ox.toFixed(1),cy:oy.toFixed(1),r:6,fill:C.org,style:"filter:drop-shadow(0 0 5px #ef5235)"},svg);
+    mk("text",{x:(ox+9).toFixed(1),y:(oy-6).toFixed(1),"font-size":9,fill:"#f0a594"},svg).textContent="原口背唇部";
+  }
+
+  function drawNeurula(){
+    if(developed)return;
+    svg.innerHTML="";developed=true;phase.textContent="神経胚（断面）";
+    const bx=170,by=178;
+    mk("ellipse",{cx:bx,cy:by,rx:128,ry:90,fill:"rgba(255,255,255,.02)",stroke:"rgba(255,255,255,.12)","stroke-width":1.5},svg);
+    const parts=[];
+    function organ(tag,draw){const g=mk("g",{},svg);draw(g);if(painted[tag])parts.push(g);return g;}
+    const np=painted.neu,tp=painted.noto,mp=painted.meso,ep=painted.endo,pp=painted.epi;
+    organ("neu",g=>mk("ellipse",{cx:bx,cy:by-42,rx:16,ry:20,fill:"rgba(255,255,255,.04)",
+      stroke:np||"rgba(255,255,255,.13)","stroke-width":np?8:3,style:np?`filter:drop-shadow(0 0 9px ${np})`:""},g));
+    organ("noto",g=>mk("circle",{cx:bx,cy:by-6,r:11,fill:tp||"rgba(255,255,255,.08)",
+      style:tp?`filter:drop-shadow(0 0 7px ${tp})`:""},g));
+    organ("meso",g=>[bx-46,bx+46].forEach(x=>mk("ellipse",{cx:x,cy:by+12,rx:20,ry:17,
+      fill:mp||"rgba(255,255,255,.08)",style:mp?`filter:drop-shadow(0 0 7px ${mp})`:""},g)));
+    organ("endo",g=>mk("ellipse",{cx:bx,cy:by+48,rx:40,ry:20,fill:ep||"rgba(255,255,255,.08)",
+      style:ep?`filter:drop-shadow(0 0 7px ${ep})`:""},g));
+    if(pp){const g=mk("g",{},svg);mk("ellipse",{cx:bx,cy:by,rx:128,ry:90,fill:"none",
+      stroke:pp,"stroke-width":6,opacity:.9,style:`filter:drop-shadow(0 0 7px ${pp})`},g);parts.push(g);}
+    function lb(x1,y1,x2,y2,t,col,anc){mk("line",{x1,y1,x2,y2,stroke:col,opacity:.4,"stroke-width":1},svg);
+      mk("text",{x:x2+(anc==="start"?4:anc==="end"?-4:0),y:y2+4,"text-anchor":anc,"font-size":11,fill:col,"font-weight":700},svg).textContent=t;}
+    lb(bx,by-62,bx,by-96,"神経管",np||"#48685e","middle");
+    lb(bx+11,by-6,bx+50,by-6,"脊索",tp||"#48685e","start");
+    lb(bx-66,by+12,bx-110,by+12,"体節",mp||"#48685e","end");
+    lb(bx,by+68,bx,by+96,"内胚葉",ep||"#48685e","middle");
+    lb(bx-112,by-40,bx-116,by-66,"表皮",pp||"#48685e","end");
+    parts.forEach((g,i)=>{if(!RM){g.style.opacity="0";setTimeout(()=>{g.style.opacity="1";pop(g);},i*160);}});
+    const keys=Object.keys(painted);
+    if(keys.length){
+      const names=keys.map(k=>REG.find(r=>r.k===k).organ);
+      msg.className="msg ok";
+      msg.innerHTML=`染めた領域が <b style="color:${painted[keys[0]]}">${names.join("・")}</b> として光った！`;
+      sum.classList.add("show");
+      sum.innerHTML=`<b>まとめ</b>：胚の表面の各部分は、将来なる器官があらかじめ決まっている。これを地図にしたものが<b>予定運命図（原基分布図）</b>。`;
+    }else{
+      msg.className="msg info";msg.textContent="染料なし。リセットして染色してから発生させてみよう。";
+    }
+  }
+  document.getElementById("map-dev").onclick=drawNeurula;
+  document.getElementById("map-rst").onclick=()=>{Object.keys(painted).forEach(k=>delete painted[k]);drawEmbryo();
+    msg.className="msg info";msg.textContent="染料を選び、胚の領域をクリックして染色しよう。";};
+  drawEmbryo();
+})();
+
+/* ================================================
+   弐: 運命の決定
+================================================ */
+(()=>{
+  const svg=document.getElementById("det-svg"),msg=document.getElementById("det-msg"),
+    dev=document.getElementById("det-dev"),rst=document.getElementById("det-rst"),
+    phase=document.getElementById("det-phase"),sum=document.getElementById("det-sum"),
+    trialsBox=document.getElementById("det-trials");
+  const cx=170,cy=185,r=120;
+  let stage="early",dropAngle=null,dropped=false;
+  const done={};/* "early-back" 等 */
+
+  const TRIALS=[["early","back","初期×背側"],["early","belly","初期×腹側"],
+    ["late","back","後期×背側"],["late","belly","後期×腹側"]];
+  function renderTrials(){
+    trialsBox.innerHTML="";
+    TRIALS.forEach(([s,z,label])=>{
+      const t=document.createElement("span");
+      t.className="trial"+(done[s+"-"+z]?" hit":"");
+      t.textContent=(done[s+"-"+z]?"✓ ":"")+label;
+      trialsBox.appendChild(t);
+    });
+  }
+
+  document.querySelectorAll("#det-tog button").forEach(b=>b.onclick=()=>{
+    stage=b.dataset.v;document.querySelectorAll("#det-tog button").forEach(x=>x.className=x===b?"on":"");reset();});
+
+  function reset(){
+    svg.innerHTML="";dropped=false;dropAngle=null;dev.disabled=true;phase.textContent="移植前";
+    msg.className="msg info";msg.textContent="小片（■）を胚の好きな場所へドラッグしよう。";sum.classList.remove("show");
+    mk("circle",{cx,cy,r,fill:"rgba(255,255,255,.03)",stroke:"rgba(255,255,255,.1)"},svg);
+    mk("path",{d:sector(cx,cy,r,r-20,50,130),fill:C.neu,opacity:.85},svg);
+    mk("path",{d:sector(cx,cy,r,r-20,196,344),fill:C.epi,opacity:.85},svg);
+    mk("text",{x:cx,y:cy-r-12,"text-anchor":"middle","font-size":10,fill:"#5d8a7f"},svg).textContent="背側（予定神経）";
+    mk("text",{x:cx,y:cy+r+18,"text-anchor":"middle","font-size":10,fill:"#5d8a7f"},svg).textContent="腹側（予定表皮）";
+    /* ドロップ可能ゾーンのガイド(ドラッグ中表示) */
+    const guide=mk("circle",{cx,cy,r,fill:"none",stroke:C.neu,"stroke-width":2,
+      "stroke-dasharray":"6 5",opacity:0,id:"det-guide"},svg);
+    const gp=mk("g",{transform:`translate(${cx-14},${cy+r+36})`},svg);
+    mk("rect",{x:0,y:0,width:28,height:22,rx:5,fill:C.epi,stroke:"#fff","stroke-width":1.5,id:"det-piece"},gp);
+    mk("text",{x:14,y:36,"text-anchor":"middle","font-size":9,fill:"#7ca99d"},gp).textContent="予定表皮の小片";
+    makeDraggable(gp,svg,(px,py)=>{
+      guide.style.opacity=0;
+      if(!inCircle(px,py,cx,cy,r)){msg.className="msg info";msg.textContent="胚の上にドロップしてください。もう一度ドラッグしてね。";return;}
+      dropped=true;dropAngle=angle(px,py,cx,cy);dev.disabled=false;phase.textContent="移植後";
+      const dorsal=dropAngle>40&&dropAngle<140;
+      msg.className="msg info";msg.innerHTML=`<b>${dorsal?"背側（神経域）":"腹側（表皮域）"}</b>に移植。「発生させる」を押そう。`;
+    },()=>{if(!dropped)guide.style.opacity=.5;});
+  }
+
+  dev.onclick=()=>{
+    dev.disabled=true;phase.textContent="発生後";
+    const dorsal=dropAngle>40&&dropAngle<140;
+    const zone=dorsal?"back":"belly";
+    const piece=document.getElementById("det-piece");
+    let col,resultHTML,cls;
+    if(stage==="early"){
+      col=dorsal?C.neu:C.epi;
+      resultHTML=dorsal
+        ?`✅ <b>初期 × 背側</b> → 小片が <b style="color:${C.neu}">神経</b>になった！<br>未決定なので<b>移植先の運命</b>に従う。`
+        :`✅ <b>初期 × 腹側</b> → <b style="color:${C.epi}">表皮</b>のまま。未決定でも周囲と一致し正常。`;
+      cls="ok";
+    }else{
+      col=C.epi;
+      if(dorsal){
+        mk("circle",{cx,cy:cy-r+18,r:22,fill:"none",stroke:C.org,"stroke-width":2,"stroke-dasharray":"4 3"},svg);
+        resultHTML=`❌ <b>後期 × 背側</b> → 神経域なのに <b style="color:${C.epi}">表皮</b>が出現！<br>決定済みなので<b>元の運命</b>を保つ。`;cls="ng";
+      }else{
+        resultHTML=`✅ <b>後期 × 腹側</b> → 表皮域なので見た目は正常。でも運命は既に固定済み。`;cls="ok";
+      }
+    }
+    piece.setAttribute("fill",col);piece.setAttribute("style",`filter:drop-shadow(0 0 7px ${col})`);
+    if(!RM)piece.animate([{opacity:.3},{opacity:1}],{duration:500,fill:"both"});
+    msg.className="msg "+cls;msg.innerHTML=resultHTML;
+    done[stage+"-"+zone]=true;renderTrials();
+    if(Object.keys(done).length>=4){
+      sum.classList.add("show");
+      sum.innerHTML=`<b>まとめ</b>：初期は移植先に従い（未決定）、後期は元の運命を保つ（決定済み）。細胞の運命は<b>原腸胚期に決定</b>される。`;
+    }
+  };
+  rst.onclick=reset;
+  renderTrials();reset();
+})();
+
+/* ================================================
+   参: 形成体と誘導
+================================================ */
+(()=>{
+  const svg=document.getElementById("org-svg"),msg=document.getElementById("org-msg"),
+    dev=document.getElementById("org-dev"),rst=document.getElementById("org-rst"),
+    phase=document.getElementById("org-phase"),sum=document.getElementById("org-sum"),
+    trialsBox=document.getElementById("org-trials");
+  const D={cx:88,cy:155,r:66},H={cx:252,cy:155,r:66};
+  let dropAngle=null,dropped=false;const done={};
+
+  const TRIALS=[["belly","腹側"],["back","背側"],["side","側面"]];
+  function renderTrials(){trialsBox.innerHTML="";TRIALS.forEach(([z,label])=>{
+    const t=document.createElement("span");t.className="trial"+(done[z]?" hit":"");
+    t.textContent=(done[z]?"✓ ":"")+label;trialsBox.appendChild(t);});}
+
+  function zoneName(a){if(a>50&&a<130)return"back";if(a>220&&a<320)return"belly";return"side";}
+  function zoneJP(z){return z==="back"?"背側":z==="belly"?"腹側":"側面";}
+
+  function reset(){
+    svg.innerHTML="";dropped=false;dropAngle=null;dev.disabled=true;phase.textContent="移植前";
+    msg.className="msg info";msg.textContent="赤い●（原口背唇部）を受容胚へドラッグしよう。";sum.classList.remove("show");
+    [D,H].forEach((o,i)=>{
+      mk("circle",{cx:o.cx,cy:o.cy,r:o.r,fill:"rgba(255,255,255,.03)",stroke:"rgba(255,255,255,.12)"},svg);
+      mk("circle",{cx:o.cx,cy:o.cy,r:o.r-2,fill:"none",stroke:C.epi,"stroke-width":4,opacity:.35},svg);
+      mk("text",{x:o.cx,y:o.cy+o.r+15,"text-anchor":"middle","font-size":10,fill:"#5d8a7f"},svg).textContent=i?"受容胚":"提供胚";
+    });
+    mk("line",{x1:D.cx+D.r+6,y1:D.cy,x2:H.cx-H.r-6,y2:H.cy,stroke:"rgba(255,255,255,.2)","stroke-width":1,"stroke-dasharray":"4 3"},svg);
+    const guide=mk("circle",{cx:H.cx,cy:H.cy,r:H.r,fill:"none",stroke:C.org,"stroke-width":2,"stroke-dasharray":"6 5",opacity:0,id:"org-guide"},svg);
+    const[px,py]=polar(D.cx,D.cy,D.r-11,28);
+    const gp=mk("g",{transform:`translate(${px.toFixed(1)},${py.toFixed(1)})`},svg);
+    mk("circle",{cx:0,cy:0,r:10,fill:C.org,style:"filter:drop-shadow(0 0 6px #ef5235)"},gp);
+    mk("text",{x:0,y:-15,"text-anchor":"middle","font-size":8,fill:"#f0a594"},gp).textContent="原口背唇部";
+    makeDraggable(gp,svg,(ex,ey)=>{
+      guide.style.opacity=0;
+      if(!inCircle(ex,ey,H.cx,H.cy,H.r)){msg.className="msg info";msg.textContent="受容胚の上にドロップしてください。";return;}
+      dropped=true;dropAngle=angle(ex,ey,H.cx,H.cy);dev.disabled=false;phase.textContent="移植後";
+      msg.className="msg info";msg.innerHTML=`受容胚の<b>${zoneJP(zoneName(dropAngle))}</b>に移植。「発生させる」を押そう。`;
+    },()=>{if(!dropped)guide.style.opacity=.5;});
+  }
+
+  dev.onclick=()=>{
+    dev.disabled=true;phase.textContent="発生後";
+    const z=zoneName(dropAngle);
+    const prim=mk("g",{},svg);
+    mk("ellipse",{cx:H.cx,cy:H.cy-H.r+18,rx:8,ry:12,fill:"rgba(255,255,255,.03)",stroke:C.neu,"stroke-width":6},prim);
+    mk("text",{x:H.cx+20,y:H.cy-H.r+22,"font-size":10,fill:C.neu},prim).textContent="一次胚";
+    const[nx,ny]=polar(H.cx,H.cy,H.r-18,dropAngle);
+    const g=mk("g",{},svg);let html,cls;
+    if(z==="back"){
+      mk("ellipse",{cx:nx.toFixed(1),cy:ny.toFixed(1),rx:9,ry:12,fill:"rgba(255,255,255,.03)",stroke:C.neu,"stroke-width":6},g);
+      mk("circle",{cx:nx.toFixed(1),cy:ny.toFixed(1),r:4,fill:C.noto},g);
+      mk("circle",{cx:nx.toFixed(1),cy:ny.toFixed(1),r:22,fill:"none",stroke:C.org,"stroke-width":2,"stroke-dasharray":"4 3"},g);
+      mk("text",{x:(+nx.toFixed(0)+18),y:(+ny.toFixed(0)+4),"font-size":10,fill:C.org},g).textContent="⚠ 過剰";
+      html=`❌ <b>背側</b> → 神経管が<b style="color:${C.org}">2本密集</b>し発生異常。一次胚と重なってしまう。`;cls="ng";
+    }else if(z==="belly"){
+      mk("ellipse",{cx:nx.toFixed(1),cy:ny.toFixed(1),rx:9,ry:12,fill:"rgba(255,255,255,.03)",stroke:C.neu,"stroke-width":6},g);
+      mk("circle",{cx:nx.toFixed(1),cy:ny.toFixed(1),r:4,fill:C.noto},g);
+      mk("circle",{cx:nx.toFixed(1),cy:ny.toFixed(1),r:24,fill:"none",stroke:C.org,"stroke-width":1.5,"stroke-dasharray":"5 3"},g);
+      mk("text",{x:(+nx.toFixed(0)+18),y:(+ny.toFixed(0)+4),"font-size":10,fill:C.neu},g).textContent="二次胚";
+      html=`✅ <b>腹側</b> → 正常な<b style="color:${C.neu}">二次胚</b>が誘導された！これが<b>形成体</b>の証拠。`;cls="ok";
+    }else{
+      mk("ellipse",{cx:nx.toFixed(1),cy:ny.toFixed(1),rx:7,ry:10,fill:"rgba(255,255,255,.03)",stroke:C.neu,"stroke-width":5},g);
+      mk("circle",{cx:nx.toFixed(1),cy:ny.toFixed(1),r:4,fill:C.noto},g);
+      mk("text",{x:(+nx.toFixed(0)+(dropAngle<180?14:-50)),y:(+ny.toFixed(0)+4),"font-size":10,fill:C.neu},g).textContent="側方神経";
+      html=`⚠ <b>側面</b> → 側方に<b style="color:${C.neu}">神経が誘導</b>（部分二次軸）。背腹軸が乱れた不完全な胚。`;cls="info";
+    }
+    pop(g,500);
+    msg.className="msg "+cls;msg.innerHTML=html;
+    done[z]=true;renderTrials();
+    if(Object.keys(done).length>=3){
+      sum.classList.add("show");
+      sum.innerHTML=`<b>まとめ</b>：原口背唇部は接する外胚葉を<b>神経へ誘導</b>し二次胚をつくる。このような領域を<b>形成体（オーガナイザー）</b>という。`;
+    }
+  };
+  rst.onclick=reset;renderTrials();reset();
+})();
+
+/* ================================================
+   四: クイズ
+================================================ */
+(()=>{
+  const QS=[
+    {q:"フォークトが予定運命図に用いた方法は？",o:["凍結切片の観察","生体染色で細胞を追跡","遠心分離","X線撮影"],a:1,
+     f:"生きたまま色素で染め、その細胞の行き先を観察した（局所生体染色法）。"},
+    {q:"初期原腸胚の予定表皮を背側（神経域）へ移植すると？",o:["表皮になる","神経になる","脊索になる","発生が止まる"],a:1,
+     f:"未決定なので移植先の環境（背側）に従い神経になる。"},
+    {q:"後期原腸胚で同じ移植をすると神経域に表皮が生じるのはなぜ？",o:["誘導物質不足","運命が決定済みだから","細胞の老化","偶然"],a:1,
+     f:"後期は運命決定済み。元の運命（表皮）を保つため神経域に表皮ができる。"},
+    {q:"腹側に置いた原口背唇部が二次胚をつくることが示すのは？",o:["栄養を供給する","周囲の外胚葉を神経へ誘導する形成体である","移植片が増殖する","内胚葉でのみ働く"],a:1,
+     f:"原口背唇部＝形成体。自身は脊索などになりつつ周囲を神経へ誘導する。"},
+    {q:"誘導により二次胚の神経管は主に何の細胞からできる？",o:["移植片（提供胚）","受容胚（宿主）","培養液","卵黄"],a:1,
+     f:"体色の違う種を使った観察から、二次胚の神経管は受容胚の細胞からできると示された。"},
+  ];
+  const box=document.getElementById("quiz"),scoreEl=document.getElementById("qscore").querySelector("b"),
+    doneEl=document.getElementById("qdone");
+  let score=0,answered=0;
+  QS.forEach((item,qi)=>{
+    const d=document.createElement("div");d.className="qblock";
+    const p=document.createElement("p");p.textContent=`Q${qi+1}. ${item.q}`;d.appendChild(p);
+    const fb=document.createElement("div");fb.className="qfb";let done=false;
+    item.o.forEach((o,oi)=>{
+      const b=document.createElement("button");b.textContent=o;
+      b.onclick=()=>{if(done)return;done=true;answered++;
+        const ok=oi===item.a;if(ok)score++;
+        b.className=ok?"ok":"ng";
+        if(!ok)d.querySelectorAll("button")[item.a].className="ok";
+        fb.textContent=(ok?"◎ 正解！ ":"✕ ")+item.f;
+        d.querySelectorAll("button").forEach(x=>x.disabled=true);
+        scoreEl.textContent=score;
+        if(answered>=QS.length)doneEl.classList.add("show");
+      };
+      d.appendChild(b);
+    });
+    d.appendChild(fb);box.appendChild(d);
+  });
+})();
+</script>
+</body>
+</html>
