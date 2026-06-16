@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DNA解読指令 ─ 生命の暗号を解け</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Share+Tech+Mono&display=swap');
+
+  :root{
+    --void:#070b14; --panel:#0d1626; --panel2:#111e33; --line:#1d3a5c;
+    --ink:#e8f1ff; --dim:#7f9bc4;
+    --acid:#39ffd0; --acid-dim:#1c8a73; --amber:#ffc24b; --rose:#ff5d7e; --violet:#9d7bff;
+    --A:#39ffd0; --T:#ffc24b; --G:#ff5d7e; --C:#6fb4ff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(57,255,208,.06), transparent 60%),
+      radial-gradient(900px 500px at 0% 100%, rgba(157,123,255,.07), transparent 55%),
+      var(--void);
+    color:var(--ink); font-family:'Zen Kaku Gothic New',sans-serif; line-height:1.8;
+    -webkit-font-smoothing:antialiased; overflow-x:hidden;
+  }
+  .mono{font-family:'Share Tech Mono',monospace}
+  body::before{
+    content:"";position:fixed;inset:0;
+    background:repeating-linear-gradient(0deg, rgba(255,255,255,.015) 0 1px, transparent 1px 3px);
+    pointer-events:none;z-index:9999;mix-blend-mode:overlay;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:0 22px}
+
+  /* HERO */
+  header.hero{position:relative;padding:60px 0 34px;text-align:center;overflow:hidden}
+  .eyebrow{
+    display:inline-block;font-family:'Share Tech Mono',monospace;letter-spacing:.42em;
+    font-size:.72rem;color:var(--acid);border:1px solid var(--acid-dim);border-radius:999px;
+    padding:7px 16px 7px 20px;margin-bottom:24px;background:rgba(57,255,208,.05);
+    animation:blink 3.4s infinite steps(1);
+  }
+  @keyframes blink{0%,92%{opacity:1}94%,100%{opacity:.4}}
+  .hero h1{font-weight:900;font-size:clamp(2.1rem,7vw,4.1rem);line-height:1.08;letter-spacing:-.01em;margin-bottom:16px}
+  .hero h1 .glow{color:var(--acid);text-shadow:0 0 22px rgba(57,255,208,.55)}
+  .hero p.lead{color:var(--dim);max-width:560px;margin:0 auto;font-size:1.02rem}
+  .helix{margin:30px auto 6px;width:100%;max-width:520px;height:78px;display:block}
+  .brief{
+    margin:28px auto 0;max-width:640px;border:1px solid var(--line);
+    background:linear-gradient(180deg,var(--panel2),var(--panel));border-radius:14px;
+    padding:20px 24px;text-align:left;position:relative;
+  }
+  .brief::before{
+    content:"▍極秘指令";position:absolute;top:-12px;left:18px;background:var(--rose);color:#1a0008;
+    font-size:.7rem;font-weight:700;letter-spacing:.2em;padding:3px 11px;border-radius:6px;font-family:'Share Tech Mono',monospace;
+  }
+  .brief p{font-size:.95rem}
+  .brief .sig{color:var(--dim);font-size:.82rem;margin-top:10px;font-family:'Share Tech Mono',monospace}
+
+  /* KEYHOLDER (sticky) */
+  .holder{
+    position:sticky;top:0;z-index:60;background:rgba(7,11,20,.9);backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);padding:10px 0;margin-top:38px;
+  }
+  .holder .wrap{display:flex;gap:7px;align-items:center;justify-content:center;flex-wrap:wrap}
+  .holder .hlabel{font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--dim);letter-spacing:.14em;margin-right:4px}
+  .slot{
+    display:flex;align-items:center;gap:6px;font-family:'Share Tech Mono',monospace;font-size:.72rem;
+    color:var(--dim);padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);
+    transition:.3s;
+  }
+  .slot .ic{width:18px;height:18px;display:grid;place-items:center;font-size:.7rem}
+  .slot.got{color:#04241c;background:var(--acid);border-color:var(--acid);font-weight:700;box-shadow:0 0 14px rgba(57,255,208,.4)}
+  .slot.got .ic{filter:none}
+
+  /* STAGE */
+  .stage{padding:40px 0 10px}
+  .card{
+    border:1px solid var(--line);background:linear-gradient(180deg,var(--panel2),var(--panel));
+    border-radius:18px;padding:30px 30px 30px;margin-bottom:26px;position:relative;overflow:hidden;
+    transition:.5s;
+  }
+  /* locked state */
+  .card.locked{filter:grayscale(.7) brightness(.5);pointer-events:none;user-select:none}
+  .card.locked .lockmsg{display:flex}
+  .lockmsg{
+    display:none;position:absolute;inset:0;z-index:5;align-items:center;justify-content:center;
+    flex-direction:column;gap:8px;background:rgba(7,11,20,.72);
+    font-family:'Share Tech Mono',monospace;color:var(--dim);letter-spacing:.1em;text-align:center;padding:20px;
+  }
+  .lockmsg .big{font-size:1.6rem}
+
+  .tag{display:flex;align-items:baseline;gap:14px;margin-bottom:6px}
+  .tag .no{font-family:'Share Tech Mono',monospace;font-size:.78rem;letter-spacing:.2em;color:var(--acid);
+    border:1px solid var(--acid-dim);padding:3px 10px;border-radius:6px;white-space:nowrap}
+  .tag .kicker{color:var(--dim);font-size:.78rem;letter-spacing:.18em;font-family:'Share Tech Mono',monospace}
+  .card h2{font-size:clamp(1.5rem,4vw,2.05rem);font-weight:900;line-height:1.2;margin:8px 0 4px}
+  .card h2 em{font-style:normal;color:var(--acid)}
+  .mission{font-size:.95rem;color:var(--dim);margin-bottom:20px}
+
+  .puzzlebox{background:var(--void);border:1px dashed var(--line);border-radius:12px;padding:20px 22px;margin:18px 0}
+  .puzzlebox .ph{font-family:'Share Tech Mono',monospace;color:var(--amber);font-size:.78rem;letter-spacing:.18em;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .puzzlebox .ph::before{content:"🔍"}
+
+  .talk{border-left:2px solid var(--violet);padding:4px 0 4px 16px;margin:18px 0 6px}
+  .talk .lbl{font-family:'Share Tech Mono',monospace;color:var(--violet);font-size:.74rem;letter-spacing:.16em;margin-bottom:6px}
+  .talk ul{list-style:none;display:grid;gap:9px}
+  .talk li{position:relative;padding-left:20px;font-size:.95rem}
+  .talk li::before{content:"›";position:absolute;left:2px;color:var(--violet);font-weight:700}
+
+  .nuke{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:6px 0}
+  .part{flex:1;min-width:120px;text-align:center;border:1px solid var(--line);border-radius:10px;padding:14px 8px;background:var(--panel)}
+  .part .sym{font-size:1.6rem;margin-bottom:4px}
+  .part .nm{font-weight:700;font-size:.92rem}
+  .part .en{font-family:'Share Tech Mono',monospace;color:var(--dim);font-size:.72rem}
+  .plus{display:grid;place-items:center;color:var(--acid);font-size:1.4rem;font-weight:700}
+
+  .bases{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:8px 0}
+  .chip{width:64px;height:64px;border-radius:12px;display:grid;place-items:center;font-weight:900;font-size:1.5rem;position:relative;border:1px solid rgba(255,255,255,.12)}
+  .chip small{position:absolute;bottom:5px;font-size:.52rem;font-weight:500;letter-spacing:.04em;opacity:.85;font-family:'Share Tech Mono',monospace}
+  .chip.a{background:rgba(57,255,208,.13);color:var(--A);box-shadow:0 0 18px rgba(57,255,208,.2) inset}
+  .chip.t{background:rgba(255,194,75,.13);color:var(--T);box-shadow:0 0 18px rgba(255,194,75,.2) inset}
+  .chip.g{background:rgba(255,93,126,.13);color:var(--G);box-shadow:0 0 18px rgba(255,93,126,.2) inset}
+  .chip.c{background:rgba(111,180,255,.13);color:var(--C);box-shadow:0 0 18px rgba(111,180,255,.2) inset}
+
+  .pairline{display:flex;gap:7px;align-items:center;justify-content:center;font-family:'Share Tech Mono',monospace;font-size:1.1rem;margin:4px 0;color:var(--dim)}
+  .pairline .lk{color:var(--acid)}
+  .seqrow{display:flex;gap:3px;justify-content:center;flex-wrap:nowrap;margin:10px 0}
+  .seqrow span{width:30px;height:34px;display:grid;place-items:center;border-radius:6px;font-family:'Share Tech Mono',monospace;font-weight:700;font-size:1rem;border:1px solid var(--line);background:var(--panel)}
+  .seqrow .vA{color:var(--A)}.seqrow .vT{color:var(--T)}.seqrow .vG{color:var(--G)}.seqrow .vC{color:var(--C)}
+  .decoder{font-family:'Share Tech Mono',monospace;background:var(--void);border:1px solid var(--acid-dim);border-radius:10px;padding:16px;margin:14px 0;text-align:center;letter-spacing:.22em;color:var(--acid);font-size:1.05rem;overflow-x:auto;white-space:nowrap}
+
+  /* ANSWER GATE */
+  .gate{margin-top:20px;border:1px solid var(--acid-dim);border-radius:12px;background:rgba(57,255,208,.04);padding:16px 18px}
+  .gate .glabel{font-family:'Share Tech Mono',monospace;color:var(--acid);font-size:.78rem;letter-spacing:.12em;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .gate .glabel::before{content:"⌨"}
+  .gate .hintq{font-size:.95rem;margin-bottom:12px}
+  .gate .row{display:flex;gap:8px;flex-wrap:wrap}
+  .gate input[type=text]{
+    flex:1;min-width:180px;background:var(--void);border:1px solid var(--line);border-radius:8px;
+    color:var(--ink);padding:11px 14px;font-family:'Zen Kaku Gothic New',sans-serif;font-size:1rem;
+  }
+  .gate input[type=text]:focus{outline:none;border-color:var(--acid);box-shadow:0 0 0 2px rgba(57,255,208,.18)}
+  .gate button{
+    background:var(--acid);color:#04241c;border:none;border-radius:8px;padding:11px 22px;font-weight:700;
+    font-family:'Share Tech Mono',monospace;letter-spacing:.08em;cursor:pointer;font-size:.92rem;transition:.2s;
+  }
+  .gate button:hover{filter:brightness(1.12)}
+  .gate .feedback{margin-top:10px;font-family:'Share Tech Mono',monospace;font-size:.85rem;min-height:1.2em}
+  .gate .feedback.ng{color:var(--rose)}
+  .gate .feedback.ok{color:var(--acid)}
+  .gate .accept{font-size:.76rem;color:var(--dim);margin-top:8px}
+
+  /* KEY reveal after solve */
+  .reward{display:none;margin-top:14px;border:1px solid var(--acid);border-radius:10px;background:rgba(57,255,208,.07);padding:14px 18px;animation:pop .4s ease}
+  .reward.show{display:block}
+  @keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .reward .rk{font-family:'Share Tech Mono',monospace;color:var(--acid);font-size:.78rem;letter-spacing:.1em;margin-bottom:4px}
+  .reward .code{font-family:'Share Tech Mono',monospace;color:var(--amber);font-size:1.05rem;letter-spacing:.06em}
+  .reward .exp{font-size:.9rem;color:var(--ink);margin-top:6px}
+
+  .note{font-size:.82rem;color:var(--dim);margin-top:8px}
+
+  /* FINALE */
+  .finale{text-align:center;padding:56px 0 30px;position:relative}
+  .finale.locked .vault{filter:grayscale(.7) brightness(.5)}
+  .finale.locked .vaultlock{display:flex}
+  .vaultlock{display:none;position:absolute;inset:0;z-index:5;align-items:center;justify-content:center;flex-direction:column;gap:6px;background:rgba(7,11,20,.7);font-family:'Share Tech Mono',monospace;color:var(--dim);letter-spacing:.1em;text-align:center;padding:24px;border-radius:20px}
+  .vaultlock .big{font-size:1.8rem}
+  .finale .vault{border:1px solid var(--acid-dim);background:radial-gradient(600px 300px at 50% 0%, rgba(57,255,208,.1), transparent 70%), var(--panel);border-radius:20px;padding:40px 30px;position:relative;overflow:hidden}
+  .finale h2{font-size:clamp(1.6rem,5vw,2.6rem);font-weight:900;margin-bottom:8px}
+  .finale h2 .glow{color:var(--acid);text-shadow:0 0 24px rgba(57,255,208,.5)}
+  .finale .verdict{font-family:'Share Tech Mono',monospace;color:var(--amber);letter-spacing:.18em;font-size:.82rem;margin-bottom:22px}
+
+  /* assembled hint */
+  .assemble{margin:0 auto 22px;max-width:620px}
+  .keychips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:16px}
+  .keychips .kc{font-family:'Share Tech Mono',monospace;font-size:.74rem;color:var(--acid);border:1px solid var(--acid-dim);border-radius:8px;padding:6px 10px;background:rgba(57,255,208,.05)}
+  .hintbox{border:1px dashed var(--acid-dim);border-radius:12px;padding:18px 20px;background:var(--void);text-align:left}
+  .hintbox .ht{font-family:'Share Tech Mono',monospace;color:var(--amber);font-size:.76rem;letter-spacing:.14em;margin-bottom:8px}
+  .hintbox p{font-size:.96rem}
+
+  .finalgate{margin:22px auto 0;max-width:560px}
+
+  .finale .reveal{display:none}
+  .finale .reveal.show{display:block;animation:pop .5s ease}
+  .finale .seqfinal{font-family:'Share Tech Mono',monospace;font-size:1.3rem;letter-spacing:.3em;margin:24px 0 6px}
+  .finale .seqfinal .vA{color:var(--A)}.finale .seqfinal .vT{color:var(--T)}.finale .seqfinal .vG{color:var(--G)}.finale .seqfinal .vC{color:var(--C)}
+  .finale p.big{font-size:1.12rem;max-width:560px;margin:0 auto 6px}
+
+  /* AI + OPPA bridge */
+  .bridge{display:none;margin:30px 0 10px}
+  .bridge.show{display:block}
+  .bridge .step{border:1px solid var(--line);border-radius:14px;background:var(--panel2);padding:22px 24px;margin-bottom:16px;text-align:left}
+  .bridge .step .sh{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .bridge .step .sn{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--acid);color:#04241c;font-weight:700;font-family:'Share Tech Mono',monospace;font-size:.8rem;flex-shrink:0}
+  .bridge .step h3{font-size:1.06rem;color:var(--acid)}
+  .bridge .step p{font-size:.94rem;color:var(--ink)}
+  .bridge .promptbox{margin-top:10px;background:var(--void);border:1px solid var(--acid-dim);border-radius:8px;padding:12px 14px;position:relative}
+  .bridge .promptbox pre{font-family:'Zen Kaku Gothic New',sans-serif;white-space:pre-wrap;font-size:.9rem;color:var(--ink);line-height:1.7}
+  .bridge .copybtn{position:absolute;top:8px;right:8px;background:var(--acid-dim);color:var(--ink);border:none;border-radius:6px;padding:4px 10px;font-size:.72rem;font-family:'Share Tech Mono',monospace;cursor:pointer}
+  .bridge .copybtn:hover{filter:brightness(1.2)}
+  .bridge textarea{width:100%;margin-top:10px;background:var(--void);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:10px 12px;font-family:inherit;font-size:.92rem;resize:vertical;min-height:80px}
+  .bridge textarea:focus{outline:none;border-color:var(--acid-dim)}
+
+  footer{padding:30px 0 50px;text-align:center;color:var(--dim);font-size:.78rem;font-family:'Share Tech Mono',monospace}
+
+  /* reset link */
+  .resetbar{text-align:center;padding:0 0 30px}
+  .resetbar button{background:transparent;border:1px solid var(--line);color:var(--dim);border-radius:8px;padding:7px 16px;font-family:'Share Tech Mono',monospace;font-size:.76rem;cursor:pointer}
+  .resetbar button:hover{border-color:var(--rose);color:var(--rose)}
+
+  @media(max-width:560px){
+    .card{padding:24px 18px 24px}
+    .nuke{flex-direction:column}.plus{transform:rotate(90deg)}
+    .seqrow span{width:26px;height:30px;font-size:.85rem}
+    .gate .row{flex-direction:column}.gate button{width:100%}
+  }
+  @media (prefers-reduced-motion: reduce){*{animation:none !important;scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="wrap">
+    <span class="eyebrow">CLASSIFIED // 生命科学解読班</span>
+    <h1>DNA解読指令<br><span class="glow">生命の暗号</span>を解け</h1>
+    <p class="lead">5つの封印を順に解いた班だけが、最後の金庫にたどり着ける。<br>答えを入力すると、次の封印が解放される。</p>
+
+    <svg class="helix" viewBox="0 0 520 78" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <g stroke-width="2" fill="none">
+        <path d="M0 39 C 65 4, 65 74, 130 39 S 195 4, 260 39 S 325 74, 390 39 S 455 4, 520 39" stroke="#39ffd0" opacity=".8"/>
+        <path d="M0 39 C 65 74, 65 4, 130 39 S 195 74, 260 39 S 325 4, 390 39 S 455 74, 520 39" stroke="#9d7bff" opacity=".7"/>
+      </g>
+      <g stroke="#1d3a5c" stroke-width="1.5">
+        <line x1="32" y1="22" x2="32" y2="56"/><line x1="97" y1="22" x2="97" y2="56"/>
+        <line x1="162" y1="22" x2="162" y2="56"/><line x1="227" y1="22" x2="227" y2="56"/>
+        <line x1="292" y1="22" x2="292" y2="56"/><line x1="357" y1="22" x2="357" y2="56"/>
+        <line x1="422" y1="22" x2="422" y2="56"/><line x1="487" y1="22" x2="487" y2="56"/>
+      </g>
+    </svg>
+
+    <div class="brief">
+      <p>解読班へ。あらゆる生物の設計図 <b>DNA</b> を入手した。構造を一つずつ解き明かし、最後に「<b>生物の見た目や性質は、いったい何で決まっているのか</b>」を突き止めよ。各封印の答えを入力すれば、次が解放される。</p>
+      <p class="sig mono">― 司令部より　/ 制限時間：本時の授業内</p>
+    </div>
+  </div>
+</header>
+
+<!-- KEYHOLDER -->
+<div class="holder" aria-label="獲得した鍵">
+  <div class="wrap">
+    <span class="hlabel mono">KEYHOLDER</span>
+    <span class="slot" data-k="1"><span class="ic">🔒</span>KEY-01</span>
+    <span class="slot" data-k="2"><span class="ic">🔒</span>KEY-02</span>
+    <span class="slot" data-k="3"><span class="ic">🔒</span>KEY-03</span>
+    <span class="slot" data-k="4"><span class="ic">🔒</span>KEY-04</span>
+    <span class="slot" data-k="5"><span class="ic">🔒</span>KEY-05</span>
+  </div>
+</div>
+
+<main class="stage">
+  <div class="wrap">
+
+  <!-- STAGE 1 -->
+  <section class="card" id="s1" data-stage="1">
+    <div class="tag"><span class="no">封印 01</span><span class="kicker">UNIT // NUCLEOTIDE</span></div>
+    <h2>最小部品を<em>組み立てろ</em></h2>
+    <p class="mission">DNAはもとをたどればたった1種類の「部品」が無数につながってできている。その部品の名は <b>ヌクレオチド</b>。3つのパーツが合体している。</p>
+    <div class="puzzlebox">
+      <div class="ph">解読パネル ─ 部品の中身</div>
+      <div class="nuke">
+        <div class="part"><div class="sym">🍬</div><div class="nm">糖</div><div class="en mono">deoxyribose</div></div>
+        <div class="plus">＋</div>
+        <div class="part"><div class="sym">🔶</div><div class="nm">リン酸</div><div class="en mono">phosphate</div></div>
+        <div class="plus">＋</div>
+        <div class="part"><div class="sym">🔤</div><div class="nm">塩基</div><div class="en mono">base</div></div>
+      </div>
+      <p class="note" style="text-align:center">糖とリン酸が交互につながって「背骨」になり、横に塩基が突き出す。</p>
+    </div>
+    <div class="talk">
+      <div class="lbl mono">▼ 班で話し合え（5分）</div>
+      <ul>
+        <li>糖・リン酸・塩基のうち、長い鎖の<b>骨組み</b>になるのはどれとどれ？　残った1つはどんな役目になりそう？</li>
+        <li>部品が10個つながると、塩基はいくつ並ぶ？</li>
+      </ul>
+    </div>
+    <div class="gate">
+      <div class="glabel mono">封印01を解除 ─ 答えを入力</div>
+      <p class="hintq">DNAを作る、糖・リン酸・塩基からなる最小の部品の名前は？</p>
+      <div class="row">
+        <input type="text" placeholder="班の答えを入力" data-answer="ヌクレオチド|ぬくれおちど|nucleotide">
+        <button>解除する</button>
+      </div>
+      <p class="feedback mono"></p>
+      <div class="reward">
+        <div class="rk mono">🔑 KEY-01 獲得</div>
+        <div class="code">部品の中で「塩基」が情報を担う</div>
+        <p class="exp">骨組みは糖とリン酸。横に飛び出した <b>塩基</b> に情報が乗る。この言葉を最後まで覚えておけ。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- STAGE 2 -->
+  <section class="card locked" id="s2" data-stage="2">
+    <div class="lockmsg mono"><span class="big">🔒</span>封印01を解くと解放される</div>
+    <div class="tag"><span class="no">封印 02</span><span class="kicker">SYMBOLS // FOUR BASES</span></div>
+    <h2>4つの<em>記号</em>を見抜け</h2>
+    <p class="mission">どんな生物のDNAを調べても、出てくる塩基は <b>たった4種類</b>。この4文字がアルファベットの代わりになる。</p>
+    <div class="puzzlebox">
+      <div class="ph">解読パネル ─ 4つの記号</div>
+      <div class="bases">
+        <div class="chip a">A<small>アデニン</small></div>
+        <div class="chip t">T<small>チミン</small></div>
+        <div class="chip g">G<small>グアニン</small></div>
+        <div class="chip c">C<small>シトシン</small></div>
+      </div>
+      <p class="note" style="text-align:center">A・T・G・C。この <b>4文字</b> だけで、ゾウもヒトも大腸菌も書かれている。</p>
+    </div>
+    <div class="talk">
+      <div class="lbl mono">▼ 班で話し合え（5分）</div>
+      <ul>
+        <li>文字がたった4種類なのに、なぜ何百万通りもの生物を表せる？　ヒント：文字の「数」ではなく別の何かが効いている。</li>
+        <li>ひらがな46文字で無限に文章が作れるのと、何が共通している？</li>
+      </ul>
+    </div>
+    <div class="gate">
+      <div class="glabel mono">封印02を解除 ─ 答えを入力</div>
+      <p class="hintq">塩基の4種類を、アルファベット1文字ずつで答えよ（順不同・続けて入力可）。</p>
+      <div class="row">
+        <input type="text" placeholder="例：ATGC" data-answer="ATGC|ATCG|AGCT|AGTC|ACGT|ACTG|TAGC|TACG|GATC|GCAT|CGAT|CATG|A,T,G,C|A T G C">
+        <button>解除する</button>
+      </div>
+      <p class="feedback mono"></p>
+      <p class="accept">A・T・G・C の4文字が入っていれば順番は問わない。</p>
+      <div class="reward">
+        <div class="rk mono">🔑 KEY-02 獲得</div>
+        <div class="code">文字は4種類 ── 効くのは「並べ方」</div>
+        <p class="exp">種類は4つでも、並べる順番と長さで組み合わせは無限。鍵は「種類の数」ではなく <b>並べ方</b> にありそうだ。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- STAGE 3 -->
+  <section class="card locked" id="s3" data-stage="3">
+    <div class="lockmsg mono"><span class="big">🔒</span>封印02を解くと解放される</div>
+    <div class="tag"><span class="no">封印 03</span><span class="kicker">RULE // COMPLEMENTARITY</span></div>
+    <h2>ペアの<em>掟</em>を破れ…ない</h2>
+    <p class="mission">塩基は決まった相手としかペアを作れない。この厳格なルールを <b>相補性</b> と呼ぶ。</p>
+    <div class="puzzlebox">
+      <div class="ph">解読パネル ─ 結びつきの規則</div>
+      <div class="pairline"><span class="mono" style="color:var(--A)">A</span><span class="lk">══</span><span class="mono" style="color:var(--T)">T</span><span style="width:24px"></span><span class="mono" style="color:var(--G)">G</span><span class="lk">═══</span><span class="mono" style="color:var(--C)">C</span></div>
+      <p class="note" style="text-align:center"><b>A は必ず T</b> と、<b>G は必ず C</b> と組む。それ以外の組み合わせは存在しない。</p>
+    </div>
+    <div class="puzzlebox">
+      <div class="ph">実戦：相方を埋めよ</div>
+      <p style="text-align:center" class="mono">片方の鎖がこうなら、もう片方は？</p>
+      <div class="seqrow"><span class="vA">A</span><span class="vT">T</span><span class="vG">G</span><span class="vG">G</span><span class="vC">C</span><span class="vA">A</span><span class="vT">T</span></div>
+      <div class="pairline mono" style="color:var(--acid)">↓　ペアの掟で変換　↓</div>
+      <div class="seqrow"><span style="color:var(--dim)">?</span><span style="color:var(--dim)">?</span><span style="color:var(--dim)">?</span><span style="color:var(--dim)">?</span><span style="color:var(--dim)">?</span><span style="color:var(--dim)">?</span><span style="color:var(--dim)">?</span></div>
+    </div>
+    <div class="talk">
+      <div class="lbl mono">▼ 班で話し合え（5分）</div>
+      <ul>
+        <li>上の「?」を相補性のルールで全部埋めよ。班で答えを一致させること。</li>
+        <li>片方が決まればもう片方は自動的に決まる。この性質は、DNAのコピーにどう役立つ？</li>
+      </ul>
+    </div>
+    <div class="gate">
+      <div class="glabel mono">封印03を解除 ─ 答えを入力</div>
+      <p class="hintq"><span class="mono">A T G G C A T</span> の相方を、ペアの掟どおり7文字で入力せよ。</p>
+      <div class="row">
+        <input type="text" placeholder="例：TACCGTA" data-answer="TACCGTA|T A C C G T A|T,A,C,C,G,T,A">
+        <button>解除する</button>
+      </div>
+      <p class="feedback mono"></p>
+      <p class="accept">A→T, T→A, G→C, C→G で変換する。</p>
+      <div class="reward">
+        <div class="rk mono">🔑 KEY-03 獲得</div>
+        <div class="code">A=T / G=C は鏡うつし</div>
+        <p class="exp">片方が決まればもう片方は必ず決まる ── だからDNAは正確に<b>自分のコピー</b>を作れる。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- STAGE 4 -->
+  <section class="card locked" id="s4" data-stage="4">
+    <div class="lockmsg mono"><span class="big">🔒</span>封印03を解くと解放される</div>
+    <div class="tag"><span class="no">封印 04</span><span class="kicker">FORM // DOUBLE HELIX</span></div>
+    <h2>立体構造を<em>復元せよ</em></h2>
+    <p class="mission">ペアになった2本の鎖はまっすぐではない。ねじれ合って、らせん階段のような形になる。これが <b>二重らせん構造</b> だ。</p>
+    <div class="puzzlebox">
+      <div class="ph">解読パネル ─ らせん階段</div>
+      <svg viewBox="0 0 300 180" width="100%" style="max-width:300px;display:block;margin:0 auto" aria-hidden="true">
+        <g stroke-width="3" fill="none">
+          <path d="M70 10 C 150 40, 150 60, 70 90 S 150 140, 70 170" stroke="#39ffd0"/>
+          <path d="M230 10 C 150 40, 150 60, 230 90 S 150 140, 230 170" stroke="#9d7bff"/>
+        </g>
+        <g stroke-width="6" stroke-linecap="round">
+          <line x1="84" y1="18" x2="216" y2="18" stroke="#1d3a5c"/>
+          <line x1="120" y1="42" x2="180" y2="42" stroke="#1d3a5c"/>
+          <line x1="120" y1="62" x2="180" y2="62" stroke="#1d3a5c"/>
+          <line x1="84" y1="90" x2="216" y2="90" stroke="#1d3a5c"/>
+          <line x1="120" y1="118" x2="180" y2="118" stroke="#1d3a5c"/>
+          <line x1="120" y1="138" x2="180" y2="138" stroke="#1d3a5c"/>
+          <line x1="84" y1="162" x2="216" y2="162" stroke="#1d3a5c"/>
+        </g>
+      </svg>
+      <p class="note" style="text-align:center">2本の鎖が外側の「手すり」、塩基ペアが「踏み板」。全体がねじれている。</p>
+    </div>
+    <div class="talk">
+      <div class="lbl mono">▼ 班で話し合え（5分）</div>
+      <ul>
+        <li>「手すり」にあたるのは何（封印01）？　「踏み板」にあたるのは何（封印02・03）？</li>
+        <li>生物ごとに中身が違うのは「手すり」？それとも「踏み板（塩基の並び）」？　予想を立てよ。</li>
+      </ul>
+    </div>
+    <div class="gate">
+      <div class="glabel mono">封印04を解除 ─ 答えを入力</div>
+      <p class="hintq">2本の鎖がねじれ合ったDNAの立体構造を、何と呼ぶ？</p>
+      <div class="row">
+        <input type="text" placeholder="班の答えを入力" data-answer="二重らせん|二重らせん構造|二重螺旋|二重螺旋構造|にじゅうらせん|double helix">
+        <button>解除する</button>
+      </div>
+      <p class="feedback mono"></p>
+      <div class="reward">
+        <div class="rk mono">🔑 KEY-04 獲得</div>
+        <div class="code">違いは「踏み板の並び順」にある</div>
+        <p class="exp">手すり（糖とリン酸）はどの生物も同じ材料。だから違いを生むのは <b>踏み板＝塩基の並び</b> のほうだ。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- STAGE 5 -->
+  <section class="card locked" id="s5" data-stage="5">
+    <div class="lockmsg mono"><span class="big">🔒</span>封印04を解くと解放される</div>
+    <div class="tag"><span class="no">封印 05</span><span class="kicker">DECODE // THE FINAL KEY</span></div>
+    <h2>暗号の<em>正体</em>を暴け</h2>
+    <p class="mission">同じ4文字（A・T・G・C）でできているのに、なぜヒトとイヌは違う姿になるのか。違いはどこに隠れているのか。</p>
+    <div class="puzzlebox">
+      <div class="ph">最終解読 ─ 2つの暗号を見比べろ</div>
+      <p class="mono" style="color:var(--dim);font-size:.82rem">同じ4文字。違うのは…？</p>
+      <div class="decoder">生物X： A T G <span style="color:var(--G)">C</span> A <span style="color:var(--G)">G</span> T</div>
+      <div class="decoder">生物Y： A T G <span style="color:var(--A)">A</span> A <span style="color:var(--A)">T</span> T</div>
+      <p class="note" style="text-align:center">使っている文字の<b>種類</b>は同じ4種。違うのは <b>並び順</b> だけ。</p>
+    </div>
+    <div class="talk">
+      <div class="lbl mono">▼ 最終討議（5分）─ 班で結論を出せ</div>
+      <ul>
+        <li>KEY-01〜04を読み返そう。生物Xと生物Yの違いを生んでいる「たった一つの要素」を班の言葉で言い切れ。</li>
+        <li>「生物の形質を決めているのは、DNAの〔　？　〕である」 ── 空欄に入る言葉を班で決定せよ。</li>
+      </ul>
+    </div>
+    <div class="gate">
+      <div class="glabel mono">最後の封印を解除 ─ 結論を入力</div>
+      <p class="hintq">生物の形質を決めているのは、DNAの何か？（漢字でもひらがなでも可）</p>
+      <div class="row">
+        <input type="text" placeholder="班の結論を入力" data-answer="塩基配列|塩基の並び|塩基の並び順|塩基の並びかた|えんきはいれつ|塩基配列の並び">
+        <button>金庫を開ける</button>
+      </div>
+      <p class="feedback mono"></p>
+      <div class="reward">
+        <div class="rk mono">🔑 KEY-05 獲得 ── 全鍵そろった</div>
+        <div class="code">塩基配列（塩基の並び順）</div>
+        <p class="exp">文字の種類でも糖でもリン酸でもない。XとYを分けていたのは <b>塩基の並ぶ順番＝塩基配列</b> だった。下へスクロールして金庫を開けろ。</p>
+      </div>
+    </div>
+  </section>
+
+  </div>
+</main>
+
+<!-- FINALE -->
+<section class="finale locked" id="finale">
+  <div class="wrap">
+    <div class="vaultlock mono"><span class="big">🔒</span>5つの封印をすべて解くと開く</div>
+    <div class="vault">
+      <p class="verdict mono">▶ ALL SEALS RELEASED ── 金庫、開錠</p>
+
+      <!-- assembled hint from keys -->
+      <div class="assemble">
+        <div class="keychips">
+          <span class="kc">KEY01 塩基が情報を担う</span>
+          <span class="kc">KEY02 効くのは並べ方</span>
+          <span class="kc">KEY03 A=T G=C</span>
+          <span class="kc">KEY04 違いは並び順</span>
+          <span class="kc">KEY05 ？</span>
+        </div>
+        <div class="hintbox">
+          <div class="ht mono">▶ 集めた鍵を組み合わせると…</div>
+          <p>「<b>塩基</b>が情報を担い（K1）／効くのは<b>並べ方</b>（K2）／A=T・G=Cで鎖は決まり（K3）／生物ごとの違いは<b>並び順</b>（K4）」── 4つの鍵がすべて指し示す答えは、ただ一つ。</p>
+        </div>
+      </div>
+
+      <h2>生命の暗号は<br><span class="glow">塩基配列</span>だった</h2>
+      <div class="seqfinal"><span class="vA">A</span><span class="vT">T</span><span class="vG">G</span><span class="vC">C</span> … <span style="color:var(--dim)">並ぶ順番がすべてを決める</span></div>
+      <p class="big"><b>生物の形質を決めているのは、塩基配列（塩基の並び）である。</b></p>
+    </div>
+
+    <!-- AI + OPPA bridge -->
+    <div class="bridge" id="bridge">
+      <div class="step">
+        <div class="sh"><span class="sn mono">1</span><h3>解読した答えを、AIにぶつけてみる</h3></div>
+        <p>金庫を開けた答え「塩基配列」を、AIに自分の言葉で説明してみよう。AIは答えを教える相手ではなく、あなたの理解を引き出す「聞き役」だ。下のプロンプトをコピーして対話を始めよう。</p>
+        <div class="promptbox">
+          <button class="copybtn mono" data-copy>コピー</button>
+          <pre id="aiPrompt">あなたは、私の理解を引き出す「聞き役」です。答えや正解は教えないでください。
+
+今日わかったこと：生物の形質を決めているのは、DNAの「塩基配列（塩基の並び順）」だと考えました。
+
+私の説明に対して、「それはどういうこと？」「もう少し具体的に言うと？」と問い返して、私が自分の言葉で説明できるよう手伝ってください。私の説明が曖昧なところを指摘し、3〜4回やり取りしたら「では今の理解をOPPAシートに書いてみよう」と促してください。
+
+【先生からの注意】AIの答えはうのみにせず、必ず教科書で確認すること。
+
+まず私から説明します：</pre>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="sh"><span class="sn mono">2</span><h3>AIと話して、わかったことを書き出す</h3></div>
+        <p>対話して気づいたこと・うまく説明できなかったことをここにメモしよう（このあとOPPAシートに転記する下書き）。</p>
+        <textarea placeholder="AIと話して、自分の言葉で言えるようになったこと / まだあいまいなこと…"></textarea>
+      </div>
+
+      <div class="step">
+        <div class="sh"><span class="sn mono">3</span><h3>OPPAシートに、今日の答えを書く</h3></div>
+        <p>本時の問い「<b>生物の形質を決めているのは、DNAの何か</b>」に対する答えと、その理由を、自分の言葉でOPPAシートに記入しよう。AIや画面の言葉を写すのではなく、自分が説明できる言葉で書くのがコツ。</p>
+        <textarea placeholder="本時の問いへの答え：塩基配列（塩基の並び）である。なぜなら…（自分の言葉で）"></textarea>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="resetbar">
+  <button id="resetBtn">▷ 最初からやり直す（次のクラス用にリセット）</button>
+</div>
+
+<footer class="mono">生命科学解読班 ／ 生物基礎「遺伝子とその働き」 ／ MISSION COMPLETE</footer>
+
+<script>
+(function(){
+  const norm = s => (s||'')
+    .trim().toLowerCase()
+    .replace(/\s+/g,'')
+    .replace(/[，、]/g,',')
+    .replace(/[ー―−]/g,'')   // 長音・ダッシュ無視
+    .replace(/。/g,'');
+
+  let unlocked = 1;            // 解放済み最大ステージ
+  const TOTAL = 5;
+
+  function setGateEnabled(card, on){
+    const inp = card.querySelector('.gate input');
+    const btn = card.querySelector('.gate button');
+    if(inp){ inp.disabled = !on; }
+    if(btn){ btn.disabled = !on; }
+  }
+  function unlockStage(n){
+    const card = document.querySelector('[data-stage="'+n+'"]');
+    if(card){ card.classList.remove('locked'); setGateEnabled(card, true); }
+  }
+  // 初期化：ロック中ステージの入力を無効化（ステージ1だけ有効）
+  document.querySelectorAll('[data-stage]').forEach(card=>{
+    if(card.classList.contains('locked')) setGateEnabled(card, false);
+  });
+  function markKey(n){
+    const slot = document.querySelector('.slot[data-k="'+n+'"]');
+    if(slot){ slot.classList.add('got'); slot.querySelector('.ic').textContent='✓'; }
+  }
+  function checkAllDone(){
+    if(unlocked > TOTAL){
+      document.getElementById('finale').classList.remove('locked');
+      document.getElementById('bridge').classList.add('show');
+    }
+  }
+
+  document.querySelectorAll('.gate').forEach(gate=>{
+    const card = gate.closest('[data-stage]');
+    const stage = parseInt(card.dataset.stage,10);
+    const input = gate.querySelector('input');
+    const btn = gate.querySelector('button');
+    const fb = gate.querySelector('.feedback');
+    const reward = gate.querySelector('.reward');
+    const accepts = (input.dataset.answer||'').split('|').map(norm);
+
+    function attempt(){
+      if(card.classList.contains('locked')) return;
+      const val = norm(input.value);
+      if(!val){ fb.textContent='▸ 答えを入力してください'; fb.className='feedback mono ng'; return; }
+      const ok = accepts.includes(val);
+      if(ok){
+        fb.textContent='✓ 封印解除！ KEY-0'+stage+' を獲得した';
+        fb.className='feedback mono ok';
+        reward.classList.add('show');
+        input.setAttribute('disabled','');
+        btn.setAttribute('disabled','');
+        btn.style.opacity=.5;
+        markKey(stage);
+        if(stage+1>unlocked){ unlocked=stage+1; unlockStage(stage+1); }
+        checkAllDone();
+        // 次のカードへスクロール
+        setTimeout(()=>{
+          const next = document.getElementById(stage<TOTAL?('s'+(stage+1)):'finale');
+          if(next) next.scrollIntoView({behavior:'smooth',block:'start'});
+        },650);
+      }else{
+        fb.textContent='✗ 暗号が一致しない。班でもう一度話し合え';
+        fb.className='feedback mono ng';
+        input.style.borderColor='var(--rose)';
+        setTimeout(()=>input.style.borderColor='',900);
+      }
+    }
+    btn.addEventListener('click',attempt);
+    input.addEventListener('keydown',e=>{ if(e.key==='Enter') attempt(); });
+  });
+
+  // copy prompt
+  document.querySelectorAll('[data-copy]').forEach(b=>{
+    b.addEventListener('click',()=>{
+      const txt=document.getElementById('aiPrompt').innerText;
+      navigator.clipboard.writeText(txt).then(()=>{
+        b.textContent='コピー済';
+        setTimeout(()=>b.textContent='コピー',1500);
+      }).catch(()=>{ b.textContent='選択してコピー'; });
+    });
+  });
+
+  // reset
+  document.getElementById('resetBtn').addEventListener('click',()=>{
+    location.reload();
+  });
+})();
+</script>
+</body>
+</html>
