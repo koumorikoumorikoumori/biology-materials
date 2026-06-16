@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BioLab Portal — DNA Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Syne:wght@400;700;800&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e14;
+    --bg2: #0f1520;
+    --bg3: #151d2e;
+    --panel: #111827;
+    --border: rgba(100,180,255,0.12);
+    --border2: rgba(100,180,255,0.25);
+    --accent: #00c8ff;
+    --accent2: #00ff99;
+    --accent3: #ff6b6b;
+    --accent4: #ffd166;
+    --text: #e8f4ff;
+    --text2: #7fa8cc;
+    --text3: #3a5a7a;
+    --A: #ff6b6b; --T: #4ecdc4; --G: #ffd166; --C: #a8e6cf;
+    --A-dark: #3d1010; --T-dark: #0d2e2c; --G-dark: #2e2200; --C-dark: #0d2e1c;
+    --glow-a: 0 0 16px rgba(255,107,107,0.5);
+    --glow-t: 0 0 16px rgba(78,205,196,0.5);
+    --glow-g: 0 0 16px rgba(255,209,102,0.5);
+    --glow-c: 0 0 16px rgba(168,230,207,0.5);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'Noto Sans JP',sans-serif;
+    background:var(--bg); color:var(--text);
+    min-height:100vh; overflow-x:hidden;
+    user-select:none; /* prevent text selection while dragging */
+  }
+  body::before {
+    content:''; position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(0,200,255,0.03) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(0,200,255,0.03) 1px,transparent 1px);
+    background-size:40px 40px; pointer-events:none; z-index:0;
+  }
+
+  /* ===== HEADER ===== */
+  .portal-header {
+    position:relative; z-index:10;
+    border-bottom:1px solid var(--border);
+    background:rgba(10,14,20,0.95);
+    backdrop-filter:blur(12px);
+    padding:0 2rem;
+    display:flex; align-items:center; justify-content:space-between;
+    height:56px;
+  }
+  .logo { display:flex; align-items:center; gap:10px; }
+  .logo-mark {
+    width:28px; height:28px; border:1.5px solid var(--accent);
+    border-radius:6px; display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600;
+    color:var(--accent); letter-spacing:-1px;
+  }
+  .logo-text { font-family:'Syne',sans-serif; font-size:15px; font-weight:800; letter-spacing:0.05em; }
+  .logo-text span { color:var(--accent); }
+  .nav-breadcrumb {
+    display:flex; align-items:center; gap:8px;
+    font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text3);
+  }
+  .nav-breadcrumb .crumb { color:var(--text2); }
+  .nav-breadcrumb .crumb.active { color:var(--accent); }
+  .xp-bar-mini { display:flex; align-items:center; gap:8px; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text2); }
+  .xp-bar-track { width:80px; height:4px; background:var(--bg3); border-radius:2px; overflow:hidden; border:1px solid var(--border); }
+  .xp-bar-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); width:0%; transition:width 0.8s ease; }
+
+  /* ===== SIDEBAR ===== */
+  .dungeon-sidebar {
+    position:fixed; left:0; top:56px; bottom:0; width:220px;
+    background:var(--bg2); border-right:1px solid var(--border);
+    z-index:8; overflow-y:auto; padding:1.5rem 0;
+  }
+  .sidebar-section { padding:0 1rem; margin-bottom:1.5rem; }
+  .sidebar-label {
+    font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:600;
+    letter-spacing:0.15em; color:var(--text3); text-transform:uppercase;
+    margin-bottom:10px; padding-left:4px;
+  }
+  .dungeon-stage {
+    display:flex; align-items:center; gap:10px; padding:8px 10px;
+    border-radius:8px; cursor:pointer; transition:all 0.2s;
+    margin-bottom:4px; border:1px solid transparent;
+  }
+  .dungeon-stage:hover { background:rgba(0,200,255,0.05); border-color:var(--border); }
+  .dungeon-stage.active { background:rgba(0,200,255,0.08); border-color:rgba(0,200,255,0.3); }
+  .dungeon-stage.locked { opacity:0.4; cursor:not-allowed; }
+  .stage-icon {
+    width:30px; height:30px; border-radius:6px; display:flex;
+    align-items:center; justify-content:center; font-size:14px; flex-shrink:0;
+    border:1px solid var(--border); background:var(--panel);
+  }
+  .dungeon-stage.active .stage-icon { border-color:var(--accent); box-shadow:0 0 10px rgba(0,200,255,0.3); }
+  .stage-info { flex:1; min-width:0; }
+  .stage-name { font-size:11px; font-weight:500; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .dungeon-stage.locked .stage-name { color:var(--text3); }
+  .stage-status { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text3); margin-top:2px; }
+  .stage-status.current { color:var(--accent); }
+  .connector-line { width:1px; height:12px; background:var(--border); margin:0 14px 4px; }
+
+  /* ===== MAIN ===== */
+  .main { margin-left:220px; padding:2rem; position:relative; z-index:1; min-height:calc(100vh - 56px); }
+
+  .stage-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:2rem; gap:2rem; }
+  .stage-unit-tag {
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--accent);
+    border:1px solid rgba(0,200,255,0.3); border-radius:4px;
+    padding:3px 10px; margin-bottom:10px; letter-spacing:0.08em;
+  }
+  .stage-title { font-family:'Syne',sans-serif; font-size:28px; font-weight:800; line-height:1.1; margin-bottom:6px; }
+  .stage-title .highlight { color:var(--accent); }
+  .stage-subtitle { font-size:13px; color:var(--text2); line-height:1.6; max-width:480px; }
+  .stage-meta { display:flex; gap:12px; flex-shrink:0; }
+  .meta-card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:12px 16px; text-align:center; min-width:80px; }
+  .meta-val { font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:600; color:var(--accent); }
+  .meta-label { font-size:10px; color:var(--text3); margin-top:3px; font-family:'JetBrains Mono',monospace; }
+
+  /* ===== GAME LAYOUT ===== */
+  .game-layout { display:grid; grid-template-columns:1fr 340px; gap:1.5rem; align-items:start; }
+
+  /* ===== DNA PANEL ===== */
+  .dna-game-panel { background:var(--panel); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+  .game-toolbar {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 16px; border-bottom:1px solid var(--border); background:var(--bg3);
+    gap:8px; flex-wrap:wrap;
+  }
+  .level-indicator { display:flex; align-items:center; gap:8px; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text2); }
+  .level-dots { display:flex; gap:4px; }
+  .ldot { width:8px; height:8px; border-radius:50%; border:1px solid var(--border2); background:transparent; transition:all 0.3s; }
+  .ldot.done { background:var(--accent2); border-color:var(--accent2); box-shadow:0 0 6px rgba(0,255,153,0.5); }
+  .ldot.current { background:var(--accent); border-color:var(--accent); animation:pulse-dot 1.5s ease-in-out infinite; }
+  @keyframes pulse-dot { 0%,100%{box-shadow:0 0 6px rgba(0,200,255,0.5)} 50%{box-shadow:0 0 12px rgba(0,200,255,0.8)} }
+  .timer-display { font-family:'JetBrains Mono',monospace; font-size:16px; font-weight:600; color:var(--accent4); letter-spacing:0.1em; }
+  .timer-display.urgent { color:var(--accent3); animation:blink 0.5s ease-in-out infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .hp-bar-wrap { display:flex; align-items:center; gap:4px; }
+  .heart { font-size:14px; transition:all 0.3s; }
+  .heart.lost { filter:grayscale(1); opacity:0.3; transform:scale(0.8); }
+  .hint-btn {
+    font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text3);
+    background:transparent; border:1px solid var(--border); border-radius:6px;
+    padding:4px 10px; cursor:pointer; transition:all 0.2s;
+  }
+  .hint-btn:hover { border-color:var(--accent4); color:var(--accent4); }
+  .btn { font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; padding:10px 24px; border-radius:8px; border:none; cursor:pointer; letter-spacing:0.08em; transition:all 0.15s; display:inline-flex; align-items:center; gap:8px; text-transform:uppercase; }
+  .btn-primary { background:var(--accent); color:#000; }
+  .btn-primary:hover { filter:brightness(1.15); transform:translateY(-1px); }
+  .btn-ghost { background:transparent; color:var(--text2); border:1px solid var(--border2); }
+  .btn-ghost:hover { background:rgba(255,255,255,0.05); color:var(--text); }
+  .btn-success { background:var(--accent2); color:#000; }
+
+  /* ===== DNA CONTAINER ===== */
+  .dna-container {
+    padding:2rem; display:flex; flex-direction:column;
+    align-items:center; gap:16px; min-height:400px;
+  }
+  .strand-section { width:100%; max-width:660px; }
+  .strand-label { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text3); letter-spacing:0.1em; margin-bottom:8px; text-transform:uppercase; }
+  .dna-strand {
+    display:flex; gap:8px; align-items:center;
+    flex-wrap:nowrap; overflow-x:auto; padding-bottom:4px; padding-top:4px;
+  }
+  .dna-strand::-webkit-scrollbar { height:4px; }
+  .dna-strand::-webkit-scrollbar-track { background:var(--bg3); border-radius:2px; }
+  .dna-strand::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+
+  /* ===== BASE NODES ===== */
+  .base-node {
+    width:52px; height:52px; border-radius:10px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:600;
+    border:2px solid; transition:all 0.15s;
+    flex-shrink:0; position:relative;
+  }
+  .base-node .base-num {
+    font-size:8px; font-weight:300; opacity:0.6;
+    position:absolute; top:4px; right:6px;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .base-A { background:var(--A-dark); border-color:var(--A); color:var(--A); box-shadow:var(--glow-a); }
+  .base-T { background:var(--T-dark); border-color:var(--T); color:var(--T); box-shadow:var(--glow-t); }
+  .base-G { background:var(--G-dark); border-color:var(--G); color:var(--G); box-shadow:var(--glow-g); }
+  .base-C { background:var(--C-dark); border-color:var(--C); color:var(--C); box-shadow:var(--glow-c); }
+
+  /* Drop target (empty slot) */
+  .base-node.empty {
+    background:var(--bg3); border-color:var(--border2); border-style:dashed;
+    color:var(--text3); font-size:20px; cursor:default;
+  }
+  .base-node.empty.drag-over {
+    border-color:var(--accent); color:var(--accent);
+    background:rgba(0,200,255,0.08);
+    transform:scale(1.08);
+    box-shadow:0 0 16px rgba(0,200,255,0.3);
+  }
+  /* Correct / Wrong animations */
+  @keyframes correct-pop { 0%{transform:scale(1)} 40%{transform:scale(1.2)} 100%{transform:scale(1)} }
+  @keyframes wrong-shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+  .anim-correct { animation:correct-pop 0.4s ease-out; }
+  .anim-wrong   { animation:wrong-shake 0.4s ease-out; }
+
+  /* ===== BONDS ===== */
+  .bond-row { display:flex; gap:8px; align-items:center; }
+  .bond-unit { width:52px; display:flex; align-items:center; justify-content:center; gap:3px; flex-shrink:0; }
+  .bond-line { width:14px; height:2px; background:var(--border2); border-radius:1px; transition:background 0.3s; }
+  .bond-line.active { background:rgba(0,200,255,0.4); }
+  .bond-line.strong { background:rgba(255,209,102,0.5); width:16px; }
+
+  /* ===== PALETTE ===== */
+  .palette-section { width:100%; max-width:660px; }
+  .palette-label { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text3); letter-spacing:0.1em; margin-bottom:10px; text-transform:uppercase; }
+  .base-palette { display:flex; gap:12px; flex-wrap:wrap; }
+
+  /* Draggable palette item */
+  .palette-base {
+    width:64px; height:64px; border-radius:12px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:600;
+    border:2px solid; transition:transform 0.15s, box-shadow 0.15s;
+    cursor:grab; position:relative;
+  }
+  .palette-base:active { cursor:grabbing; }
+  .palette-base .pair-hint { font-size:9px; font-weight:300; opacity:0.7; font-family:'Noto Sans JP',sans-serif; margin-top:2px; }
+  .palette-base:hover { transform:translateY(-3px) scale(1.05); }
+  .palette-base.dragging { opacity:0.35; transform:scale(0.95); cursor:grabbing; }
+
+  /* Ghost element that follows the cursor */
+  .drag-ghost {
+    position:fixed; pointer-events:none; z-index:9999;
+    width:60px; height:60px; border-radius:12px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:600;
+    border:2px solid; opacity:0.9;
+    box-shadow:0 12px 32px rgba(0,0,0,0.5);
+    transform:translate(-50%,-50%) scale(1.12) rotate(-4deg);
+    transition:none;
+  }
+
+  /* Click-select fallback indicator */
+  .palette-base.selected {
+    transform:translateY(-4px) scale(1.1);
+    box-shadow:0 0 0 3px rgba(0,200,255,0.5), 0 8px 20px rgba(0,0,0,0.4);
+  }
+
+  /* ===== INSTRUCTION ===== */
+  .instruction-banner {
+    background:rgba(0,200,255,0.06); border:1px solid rgba(0,200,255,0.15);
+    border-radius:10px; padding:12px 16px; font-size:13px; color:var(--text2);
+    margin-bottom:1.5rem; display:flex; align-items:flex-start; gap:10px; line-height:1.6;
+  }
+
+  /* ===== PROGRESS ===== */
+  .progress-track { width:100%; height:4px; background:var(--bg3); border-radius:2px; margin-top:8px; overflow:hidden; }
+  .progress-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:2px; transition:width 0.5s ease; }
+
+  /* ===== FEEDBACK ===== */
+  .feedback-bar {
+    display:none; align-items:center; gap:12px;
+    padding:12px 20px; border-radius:10px; margin:0 2rem 1rem;
+    font-size:13px; font-weight:500;
+    animation:slide-in 0.3s ease-out;
+  }
+  @keyframes slide-in { from{transform:translateY(-10px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .feedback-bar.success { display:flex; background:rgba(0,255,153,0.1); border:1px solid rgba(0,255,153,0.3); color:var(--accent2); }
+  .feedback-bar.error   { display:flex; background:rgba(255,107,107,0.1); border:1px solid rgba(255,107,107,0.3); color:var(--accent3); }
+
+  /* ===== RIGHT PANEL ===== */
+  .right-panel { display:flex; flex-direction:column; gap:1rem; }
+  .knowledge-card,.mission-card,.badge-preview { background:var(--panel); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+  .knowledge-header,.mission-header,.badge-preview-header {
+    padding:12px 16px; border-bottom:1px solid var(--border); background:var(--bg3);
+    font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.1em;
+    color:var(--text3); text-transform:uppercase;
+  }
+  .knowledge-body,.mission-body { padding:16px; }
+  .rule-item { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); }
+  .rule-item:last-child { border-bottom:none; }
+  .rule-pair { display:flex; align-items:center; gap:6px; font-family:'JetBrains Mono',monospace; font-size:15px; font-weight:600; }
+  .rule-desc { font-size:12px; color:var(--text2); line-height:1.5; }
+  .bonds-badge { margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:10px; padding:2px 8px; border-radius:4px; background:var(--bg3); border:1px solid var(--border); color:var(--text2); white-space:nowrap; }
+  .mission-item { display:flex; align-items:center; gap:10px; padding:8px 0; font-size:12px; color:var(--text2); border-bottom:1px solid var(--border); }
+  .mission-item:last-child { border-bottom:none; }
+  .mission-check { width:16px; height:16px; border-radius:4px; border:1px solid var(--border2); display:flex; align-items:center; justify-content:center; font-size:10px; flex-shrink:0; transition:all 0.3s; }
+  .mission-check.done { background:var(--accent2); border-color:var(--accent2); color:#000; }
+  .badge-preview-body { padding:16px; display:flex; flex-direction:column; gap:10px; }
+  .badge-item { display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg3); opacity:0.4; transition:all 0.4s; }
+  @keyframes badge-glow { 0%{box-shadow:0 0 0 rgba(0,255,153,0)} 50%{box-shadow:0 0 20px rgba(0,255,153,0.4)} 100%{box-shadow:0 0 6px rgba(0,255,153,0.1)} }
+  .badge-item.unlocked { opacity:1; border-color:rgba(0,255,153,0.3); background:rgba(0,255,153,0.05); animation:badge-glow 0.6s ease-out; }
+  .badge-icon-large { font-size:24px; width:40px; text-align:center; }
+  .badge-info { flex:1; }
+  .badge-name { font-size:12px; font-weight:500; color:var(--text); margin-bottom:2px; }
+  .badge-cond { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text3); }
+  .badge-item.unlocked .badge-name { color:var(--accent2); }
+  .badge-item.unlocked .badge-cond { color:var(--text2); }
+
+  /* ===== INTRO ===== */
+  #screen-intro { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:60vh; gap:2rem; text-align:center; }
+  .dna-animation { font-size:60px; animation:float 3s ease-in-out infinite; display:inline-block; }
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+  .intro-title { font-family:'Syne',sans-serif; font-size:40px; font-weight:800; line-height:1.1; }
+  .intro-title .line2 { color:var(--accent); font-size:32px; }
+  .intro-desc { font-size:14px; color:var(--text2); max-width:480px; line-height:1.8; }
+  .level-cards { display:flex; gap:16px; flex-wrap:wrap; justify-content:center; max-width:720px; }
+  .level-card { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:20px 24px; min-width:160px; cursor:pointer; transition:all 0.2s; text-align:left; position:relative; overflow:hidden; }
+  .level-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,var(--accent),transparent); opacity:0; transition:opacity 0.2s; }
+  .level-card:hover { border-color:var(--border2); transform:translateY(-2px); }
+  .level-card:hover::before { opacity:1; }
+  .level-card.locked { opacity:0.35; cursor:not-allowed; transform:none; }
+  .level-num { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text3); letter-spacing:0.1em; margin-bottom:6px; }
+  .level-name { font-family:'Syne',sans-serif; font-size:16px; font-weight:700; margin-bottom:6px; }
+  .level-desc { font-size:11px; color:var(--text2); line-height:1.5; margin-bottom:12px; }
+  .level-stars { font-size:12px; color:var(--accent4); }
+
+  /* ===== RESULT OVERLAY ===== */
+  #result-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:100; align-items:center; justify-content:center; }
+  #result-overlay.show { display:flex; }
+  .result-modal { background:var(--bg2); border:1px solid var(--border2); border-radius:20px; padding:3rem; text-align:center; max-width:480px; width:90%; animation:modal-in 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+  @keyframes modal-in { from{transform:scale(0.8);opacity:0} to{transform:scale(1);opacity:1} }
+  .result-icon { font-size:64px; margin-bottom:1rem; }
+  .result-title { font-family:'Syne',sans-serif; font-size:28px; font-weight:800; margin-bottom:0.5rem; }
+  .result-title.win { color:var(--accent2); }
+  .result-title.fail { color:var(--accent3); }
+  .result-stats { display:flex; gap:16px; justify-content:center; margin:1.5rem 0; }
+  .result-stat { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:12px 20px; }
+  .result-stat-val { font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:600; color:var(--accent); }
+  .result-stat-label { font-size:10px; color:var(--text3); margin-top:3px; font-family:'JetBrains Mono',monospace; }
+  .new-badges { display:flex; flex-direction:column; gap:8px; margin:1.5rem 0; }
+  .new-badge-item { display:flex; align-items:center; gap:12px; padding:10px 16px; background:rgba(0,255,153,0.08); border:1px solid rgba(0,255,153,0.25); border-radius:8px; text-align:left; }
+  .new-badge-label { font-size:10px; font-family:'JetBrains Mono',monospace; color:var(--accent2); margin-bottom:2px; }
+  .new-badge-name { font-weight:500; font-size:14px; }
+  .result-btns { display:flex; gap:12px; justify-content:center; margin-top:1.5rem; flex-wrap:wrap; }
+
+  /* ===== TOAST ===== */
+  .toast { position:fixed; top:70px; right:20px; background:var(--bg2); border:1px solid var(--border2); border-radius:10px; padding:12px 16px; display:flex; align-items:center; gap:10px; font-size:13px; z-index:200; transform:translateX(120%); transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1); max-width:300px; }
+  .toast.show { transform:translateX(0); }
+
+  /* ===== SCREENS ===== */
+  #screen-game { display:none; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="portal-header">
+  <div class="logo">
+    <div class="logo-mark">BL</div>
+    <div class="logo-text">Bio<span>Lab</span></div>
+  </div>
+  <nav class="nav-breadcrumb">
+    <span class="crumb">ポータル</span><span>/</span>
+    <span class="crumb">生物基礎</span><span>/</span>
+    <span class="crumb">遺伝子とその働き</span><span>/</span>
+    <span class="crumb active">DNA Builder</span>
+  </nav>
+  <div class="xp-bar-mini">
+    <span>XP</span>
+    <div class="xp-bar-track"><div class="xp-bar-fill" id="xp-bar"></div></div>
+    <span id="xp-count">0</span>
+  </div>
+</header>
+
+<!-- SIDEBAR -->
+<aside class="dungeon-sidebar">
+  <div class="sidebar-section">
+    <div class="sidebar-label">Unit 01 — 遺伝子</div>
+    <div class="dungeon-stage active">
+      <div class="stage-icon">🧬</div>
+      <div class="stage-info">
+        <div class="stage-name">DNA Builder</div>
+        <div class="stage-status current">● 進行中</div>
+      </div>
+    </div>
+    <div class="connector-line"></div>
+    <div class="dungeon-stage locked"><div class="stage-icon">🔄</div><div class="stage-info"><div class="stage-name">複製ランナー</div><div class="stage-status">🔒 ロック中</div></div></div>
+    <div class="connector-line"></div>
+    <div class="dungeon-stage locked"><div class="stage-icon">🏭</div><div class="stage-info"><div class="stage-name">翻訳工場</div><div class="stage-status">🔒 ロック中</div></div></div>
+    <div class="connector-line"></div>
+    <div class="dungeon-stage locked"><div class="stage-icon">⚗️</div><div class="stage-info"><div class="stage-name">細胞周期</div><div class="stage-status">🔒 ロック中</div></div></div>
+    <div class="connector-line"></div>
+    <div class="dungeon-stage locked"><div class="stage-icon">🏛️</div><div class="stage-info"><div class="stage-name">実験史の謎</div><div class="stage-status">🔒 ロック中</div></div></div>
+    <div class="connector-line"></div>
+    <div class="dungeon-stage locked"><div class="stage-icon">🏆</div><div class="stage-info"><div class="stage-name">学者コース</div><div class="stage-status">🔒 ロック中</div></div></div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Unit 02 — 細胞</div>
+    <div class="dungeon-stage locked"><div class="stage-icon">🔬</div><div class="stage-info"><div class="stage-name">細胞の構造</div><div class="stage-status">🔒 準備中</div></div></div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- INTRO SCREEN -->
+  <div id="screen-intro">
+    <div class="dna-animation">🧬</div>
+    <div>
+      <div class="intro-title">DNA Builder<br><span class="line2">塩基対の法則を解き明かせ</span></div>
+    </div>
+    <div class="intro-desc">DNAの二重らせん構造は、4種類の塩基が特定の規則で対を作ることで成り立っている。テンプレート鎖を読み取り、相補的な塩基をドラッグ＆ドロップで正確に配置してDNA鎖を完成させよう。</div>
+    <div class="level-cards">
+      <div class="level-card" onclick="startGame(1)">
+        <div class="level-num">LEVEL 01</div>
+        <div class="level-name">見習い研究者</div>
+        <div class="level-desc">4塩基の配置。ヒントあり。制限時間なし。</div>
+        <div class="level-stars">★☆☆☆☆</div>
+      </div>
+      <div class="level-card" onclick="startGame(2)">
+        <div class="level-num">LEVEL 02</div>
+        <div class="level-name">DNAアシスタント</div>
+        <div class="level-desc">8塩基。ヒントなし。60秒制限。</div>
+        <div class="level-stars">★★★☆☆</div>
+      </div>
+      <div class="level-card" onclick="startGame(3)">
+        <div class="level-num">LEVEL 03</div>
+        <div class="level-name">ゲノムエキスパート</div>
+        <div class="level-desc">12塩基。ノーミス条件。45秒制限。</div>
+        <div class="level-stars">★★★★★</div>
+      </div>
+      <div class="level-card locked">
+        <div class="level-num">SCHOLAR</div>
+        <div class="level-name">🔒 学者コース</div>
+        <div class="level-desc">Lv.3クリアで解放。発展課題。</div>
+        <div class="level-stars">★★★★★+</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="screen-game">
+    <div class="stage-header">
+      <div>
+        <div class="stage-unit-tag">◉ STAGE 01 — DNA Structure</div>
+        <h1 class="stage-title">DNA <span class="highlight">Builder</span></h1>
+        <p class="stage-subtitle" id="level-subtitle">塩基対の法則（A-T、G-C）に従って、相補鎖を完成させよ。</p>
+      </div>
+      <div class="stage-meta">
+        <div class="meta-card"><div class="meta-val" id="score-display">0</div><div class="meta-label">SCORE</div></div>
+        <div class="meta-card"><div class="meta-val" id="combo-display">×1</div><div class="meta-label">COMBO</div></div>
+      </div>
+    </div>
+
+    <div class="feedback-bar" id="feedback-bar">
+      <span id="feedback-msg"></span>
+    </div>
+
+    <div class="game-layout">
+      <div>
+        <div class="instruction-banner">
+          💡 パレットの塩基を<strong>ドラッグ</strong>して空欄スロットへドロップ。またはパレットをクリックで選択後、スロットをクリックでも配置できます。A↔T、G↔C のペアが基本ルールです。
+        </div>
+
+        <div class="dna-game-panel">
+          <div class="game-toolbar">
+            <div class="level-indicator">
+              <span id="current-level-name">Lv.1</span>
+              <div class="level-dots" id="level-dots"></div>
+            </div>
+            <div class="hp-bar-wrap" id="hp-hearts"></div>
+            <div class="timer-display" id="timer-display">00:00</div>
+            <button class="hint-btn" id="hint-btn" onclick="useHint()">💡 ヒント</button>
+            <button class="btn btn-ghost" style="padding:6px 12px;font-size:11px" onclick="goToIntro()">← 戻る</button>
+          </div>
+
+          <div class="dna-container">
+            <div class="strand-section">
+              <div class="strand-label">▸ Template Strand（テンプレート鎖）— 読み取り専用</div>
+              <div class="dna-strand" id="template-strand"></div>
+            </div>
+            <div class="strand-section">
+              <div class="bond-row" id="bond-row"></div>
+            </div>
+            <div class="strand-section">
+              <div class="strand-label">▸ Complementary Strand（相補鎖）— ドラッグ＆ドロップで完成させよ！</div>
+              <div class="dna-strand" id="comp-strand"></div>
+              <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+            </div>
+            <!-- PALETTE -->
+            <div class="palette-section">
+              <div class="palette-label">◈ 塩基パレット — ドラッグしてスロットへドロップ（またはクリックで選択）</div>
+              <div class="base-palette" id="base-palette"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT PANEL -->
+      <div class="right-panel">
+        <div class="knowledge-card">
+          <div class="knowledge-header">📚 相補的塩基対の法則</div>
+          <div class="knowledge-body">
+            <div class="rule-item">
+              <div class="rule-pair"><span style="color:var(--A)">A</span><span style="color:var(--text3);font-size:12px">⇌</span><span style="color:var(--T)">T</span></div>
+              <div class="rule-desc">アデニン — チミン<br>2本の水素結合</div>
+              <div class="bonds-badge">2H</div>
+            </div>
+            <div class="rule-item">
+              <div class="rule-pair"><span style="color:var(--G)">G</span><span style="color:var(--text3);font-size:12px">⇌</span><span style="color:var(--C)">C</span></div>
+              <div class="rule-desc">グアニン — シトシン<br>3本の水素結合（より強固）</div>
+              <div class="bonds-badge">3H</div>
+            </div>
+            <div style="margin-top:12px;font-size:11px;color:var(--text3);line-height:1.6;padding-top:10px;border-top:1px solid var(--border)">
+              💡 G-C結合の方がA-T結合より強固なため、G+C含量が高いDNAは熱に強い。
+            </div>
+          </div>
+        </div>
+
+        <div class="mission-card">
+          <div class="mission-header">🎯 ミッション</div>
+          <div class="mission-body">
+            <div class="mission-item"><div class="mission-check" id="m1">—</div><span>全塩基を正しく配置</span></div>
+            <div class="mission-item"><div class="mission-check" id="m2">—</div><span>ミスなしクリア（Lv.2以上）</span></div>
+            <div class="mission-item"><div class="mission-check" id="m3">—</div><span>制限時間内クリア</span></div>
+          </div>
+        </div>
+
+        <div class="badge-preview">
+          <div class="badge-preview-header">🏅 獲得可能バッジ</div>
+          <div class="badge-preview-body">
+            <div class="badge-item" id="badge-rookie"><div class="badge-icon-large">🌱</div><div class="badge-info"><div class="badge-name">見習い研究者</div><div class="badge-cond">Lv.1 クリア</div></div></div>
+            <div class="badge-item" id="badge-nomiss"><div class="badge-icon-large">⚡</div><div class="badge-info"><div class="badge-name">完璧な複製</div><div class="badge-cond">ミスなしクリア</div></div></div>
+            <div class="badge-item" id="badge-speed"><div class="badge-icon-large">🚀</div><div class="badge-info"><div class="badge-name">スピード解析</div><div class="badge-cond">20秒以内クリア</div></div></div>
+            <div class="badge-item" id="badge-expert"><div class="badge-icon-large">🧬</div><div class="badge-info"><div class="badge-name">DNAマスター</div><div class="badge-cond">Lv.3 クリア</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- RESULT -->
+<div id="result-overlay">
+  <div class="result-modal">
+    <div class="result-icon" id="result-icon">🎉</div>
+    <div class="result-title" id="result-title">クリア！</div>
+    <p id="result-msg" style="color:var(--text2);font-size:13px;margin:0.5rem 0"></p>
+    <div class="result-stats">
+      <div class="result-stat"><div class="result-stat-val" id="res-score">0</div><div class="result-stat-label">SCORE</div></div>
+      <div class="result-stat"><div class="result-stat-val" id="res-time">0s</div><div class="result-stat-label">TIME</div></div>
+      <div class="result-stat"><div class="result-stat-val" id="res-acc">100%</div><div class="result-stat-label">精度</div></div>
+    </div>
+    <div class="new-badges" id="new-badges"></div>
+    <div class="result-btns">
+      <button class="btn btn-ghost" onclick="goToIntro()">← レベル選択</button>
+      <button class="btn btn-primary" onclick="retryGame()">↺ もう一度</button>
+      <button class="btn btn-success" id="next-btn" onclick="nextLevel()" style="display:none">次のステージ →</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <span id="toast-icon">🏅</span>
+  <span id="toast-msg">バッジを獲得！</span>
+</div>
+
+<script>
+'use strict';
+
+// ============================================================
+//  STATE
+// ============================================================
+const state = {
+  level: 1,
+  template: [],
+  complement: [],
+  userAnswers: [],   // null = empty, 'A'|'T'|'G'|'C' = filled
+  selectedBase: null,// click-select fallback
+  score: 0,
+  combo: 1,
+  mistakes: 0,
+  maxHP: 999,
+  hp: 999,
+  elapsed: 0,
+  timerLimit: null,
+  timerInterval: null,
+  feedbackTimeout: null,
+  gameOver: false,
+  xp: safeGetInt('biolab_xp', 0),
+  badges: safeGetJSON('biolab_badges', []),
+  clearedLevels: safeGetJSON('biolab_cleared', []),
+};
+
+function safeGetInt(key, def) {
+  try { const v = parseInt(localStorage.getItem(key)); return isNaN(v) ? def : v; }
+  catch(e) { return def; }
+}
+function safeGetJSON(key, def) {
+  try { return JSON.parse(localStorage.getItem(key)) || def; }
+  catch(e) { return def; }
+}
+function safeSet(key, val) {
+  try { localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val)); }
+  catch(e) {}
+}
+
+const PAIR = { A:'T', T:'A', G:'C', C:'G' };
+const BASE_COLOR = {
+  A: { bg:'var(--A-dark)', border:'var(--A)', color:'var(--A)' },
+  T: { bg:'var(--T-dark)', border:'var(--T)', color:'var(--T)' },
+  G: { bg:'var(--G-dark)', border:'var(--G)', color:'var(--G)' },
+  C: { bg:'var(--C-dark)', border:'var(--C)', color:'var(--C)' },
+};
+
+const LEVELS = {
+  1: { name:'Lv.1 — 見習い研究者',  template:['A','T','G','C'],                              timeLimit:null, maxHP:Infinity, showHint:true,  baseScore:100 },
+  2: { name:'Lv.2 — DNAアシスタント', template:['A','G','C','T','A','C','G','T'],              timeLimit:60,   maxHP:3,        showHint:false, baseScore:200 },
+  3: { name:'Lv.3 — ゲノムエキスパート', template:['G','C','A','T','G','A','C','T','A','G','C','T'], timeLimit:45, maxHP:2,      showHint:false, baseScore:400 },
+};
+
+// ============================================================
+//  DRAG STATE  (mouse + touch unified)
+// ============================================================
+const drag = {
+  active: false,
+  base: null,       // 'A'|'T'|'G'|'C'
+  ghost: null,      // DOM element following pointer
+  sourceEl: null,   // palette element being dragged
+  overSlot: null,   // index of slot currently hovered, or null
+};
+
+// ============================================================
+//  INIT
+// ============================================================
+function init() {
+  updateXPBar();
+  updateUnlockedBadges();
+  buildPalette();
+  setupGlobalDragListeners();
+}
+
+// ============================================================
+//  XP / BADGES
+// ============================================================
+function updateXPBar() {
+  document.getElementById('xp-bar').style.width = Math.min((state.xp % 500) / 5, 100) + '%';
+  document.getElementById('xp-count').textContent = state.xp;
+}
+
+function updateUnlockedBadges() {
+  state.badges.forEach(b => {
+    const el = document.getElementById('badge-' + b);
+    if (el) el.classList.add('unlocked');
+  });
+}
+
+// ============================================================
+//  PALETTE BUILD (once, reused each level)
+// ============================================================
+function buildPalette() {
+  const palette = document.getElementById('base-palette');
+  palette.innerHTML = '';
+  ['A','T','G','C'].forEach(base => {
+    const div = document.createElement('div');
+    div.id = 'pal-' + base;
+    div.className = 'palette-base base-' + base;
+    div.innerHTML = `${base}<span class="pair-hint">${{A:'アデニン',T:'チミン',G:'グアニン',C:'シトシン'}[base]}</span>`;
+    div.dataset.base = base;
+
+    // Mouse drag
+    div.addEventListener('mousedown', onPaletteDragStart, { passive: false });
+    // Touch drag
+    div.addEventListener('touchstart', onPaletteDragStart, { passive: false });
+    // Click-select fallback
+    div.addEventListener('click', () => selectBase(base));
+
+    palette.appendChild(div);
+  });
+}
+
+// ============================================================
+//  GLOBAL DRAG LISTENERS
+// ============================================================
+function setupGlobalDragListeners() {
+  // Mouse
+  document.addEventListener('mousemove', onDragMove);
+  document.addEventListener('mouseup',   onDragEnd);
+  // Touch
+  document.addEventListener('touchmove', onDragMove, { passive: false });
+  document.addEventListener('touchend',  onDragEnd);
+  document.addEventListener('touchcancel', cancelDrag);
+}
+
+// ============================================================
+//  DRAG START
+// ============================================================
+function onPaletteDragStart(e) {
+  if (state.gameOver) return;
+  // prevent click from also firing after drag
+  e.preventDefault();
+
+  const base = e.currentTarget.dataset.base;
+  const pos = getEventPos(e);
+
+  drag.active = true;
+  drag.base = base;
+  drag.sourceEl = e.currentTarget;
+  drag.overSlot = null;
+
+  // dim the source
+  drag.sourceEl.classList.add('dragging');
+
+  // click-select syncs
+  selectBase(base);
+
+  // create ghost
+  const c = BASE_COLOR[base];
+  const ghost = document.createElement('div');
+  ghost.className = 'drag-ghost base-' + base;
+  ghost.textContent = base;
+  ghost.style.left = pos.x + 'px';
+  ghost.style.top  = pos.y + 'px';
+  document.body.appendChild(ghost);
+  drag.ghost = ghost;
+}
+
+// ============================================================
+//  DRAG MOVE
+// ============================================================
+function onDragMove(e) {
+  if (!drag.active) return;
+  e.preventDefault();
+
+  const pos = getEventPos(e);
+  drag.ghost.style.left = pos.x + 'px';
+  drag.ghost.style.top  = pos.y + 'px';
+
+  // hit-test all empty slots
+  const slots = document.querySelectorAll('.base-node.empty[data-slot]');
+  let found = null;
+  slots.forEach(slot => {
+    const rect = slot.getBoundingClientRect();
+    if (pos.x >= rect.left && pos.x <= rect.right &&
+        pos.y >= rect.top  && pos.y <= rect.bottom) {
+      found = parseInt(slot.dataset.slot);
+    }
+    slot.classList.remove('drag-over');
+  });
+
+  if (found !== null) {
+    const el = document.querySelector(`.base-node.empty[data-slot="${found}"]`);
+    if (el) el.classList.add('drag-over');
+  }
+  drag.overSlot = found;
+}
+
+// ============================================================
+//  DRAG END
+// ============================================================
+function onDragEnd(e) {
+  if (!drag.active) return;
+
+  // remove ghost
+  if (drag.ghost) { drag.ghost.remove(); drag.ghost = null; }
+  // restore source
+  if (drag.sourceEl) { drag.sourceEl.classList.remove('dragging'); }
+
+  // remove all drag-over highlights
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+
+  // attempt placement
+  if (drag.overSlot !== null && drag.base !== null) {
+    placeBase(drag.overSlot, drag.base);
+  }
+
+  drag.active = false;
+  drag.base = null;
+  drag.sourceEl = null;
+  drag.overSlot = null;
+}
+
+// ============================================================
+//  CANCEL DRAG (e.g. touchcancel)
+// ============================================================
+function cancelDrag() {
+  if (!drag.active) return;
+  if (drag.ghost) { drag.ghost.remove(); drag.ghost = null; }
+  if (drag.sourceEl) { drag.sourceEl.classList.remove('dragging'); }
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+  drag.active = false;
+  drag.base = null;
+  drag.sourceEl = null;
+  drag.overSlot = null;
+}
+
+// ============================================================
+//  POINTER POS (mouse or touch)
+// ============================================================
+function getEventPos(e) {
+  if (e.touches && e.touches.length > 0) {
+    return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }
+  if (e.changedTouches && e.changedTouches.length > 0) {
+    return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+  }
+  return { x: e.clientX, y: e.clientY };
+}
+
+// ============================================================
+//  CLICK-SELECT FALLBACK
+// ============================================================
+function selectBase(base) {
+  state.selectedBase = base;
+  ['A','T','G','C'].forEach(b => {
+    const el = document.getElementById('pal-' + b);
+    if (el) el.classList.toggle('selected', b === base);
+  });
+}
+
+function clearSelection() {
+  state.selectedBase = null;
+  ['A','T','G','C'].forEach(b => {
+    const el = document.getElementById('pal-' + b);
+    if (el) el.classList.remove('selected');
+  });
+}
+
+// Slot click: use click-selected base
+function onSlotClick(index) {
+  if (state.gameOver) return;
+  if (state.userAnswers[index] !== null) return;
+  if (!state.selectedBase) {
+    showFeedback('error', '❗ 先にパレットの塩基を選ぶか、ドラッグしてください');
+    return;
+  }
+  placeBase(index, state.selectedBase);
+}
+
+// ============================================================
+//  PLACE BASE — core game logic
+// ============================================================
+function placeBase(index, chosen) {
+  if (state.gameOver) return;
+  if (index < 0 || index >= state.template.length) return;
+  if (state.userAnswers[index] !== null) return; // already filled
+
+  const correct = state.complement[index];
+
+  if (chosen === correct) {
+    // ---- CORRECT ----
+    state.userAnswers[index] = chosen;
+
+    const slot = document.querySelector(`.base-node[data-slot="${index}"]`);
+    if (slot) {
+      slot.className = `base-node base-${chosen} anim-correct`;
+      slot.innerHTML = `<span class="base-num">${index+1}</span>${chosen}`;
+      slot.removeAttribute('data-slot');
+      slot.onclick = null;
+      // remove anim class after it finishes
+      setTimeout(() => { if(slot) slot.classList.remove('anim-correct'); }, 400);
+    }
+
+    // activate bond lines
+    const bondsCount = (chosen === 'G' || chosen === 'C') ? 3 : 2;
+    for (let b = 0; b < bondsCount; b++) {
+      const bl = document.getElementById(`bl-${index}-${b}`);
+      if (bl) bl.className = 'bond-line' + (bondsCount === 3 ? ' strong' : ' active');
+    }
+
+    state.score += Math.floor(LEVELS[state.level].baseScore * state.combo * 0.1);
+    state.combo = Math.min(state.combo + 0.5, 4);
+    updateScoreDisplay();
+    showFeedback('success', `✓ 正解！ ${chosen} は ${state.template[index]} の相補塩基。コンボ ${comboStr()}`);
+    updateProgress();
+
+    // check win
+    if (state.userAnswers.every(a => a !== null)) {
+      setTimeout(winGame, 600);
+    }
+
+  } else {
+    // ---- WRONG ----
+    state.mistakes++;
+    state.combo = 1;
+    updateScoreDisplay();
+
+    // show wrong flash then restore slot
+    const slot = document.querySelector(`.base-node[data-slot="${index}"]`);
+    if (slot) {
+      slot.className = `base-node base-${chosen} anim-wrong`;
+      slot.innerHTML = `<span class="base-num">${index+1}</span>${chosen}`;
+      setTimeout(() => {
+        if (state.gameOver) return;
+        slot.className = 'base-node empty';
+        slot.innerHTML = '+';
+        slot.dataset.slot = index;
+        slot.onclick = () => onSlotClick(index);
+        // re-attach drag-over class ability (it already has data-slot)
+      }, 420);
+    }
+
+    if (state.maxHP < 999) {
+      state.hp = Math.max(0, state.hp - 1);
+      renderHP();
+      if (state.hp <= 0) {
+        setTimeout(() => gameOver('hp'), 450);
+        return;
+      }
+    }
+
+    showFeedback('error', `✗ 不正解。${state.template[index]} の相補塩基は ${correct} です`);
+  }
+}
+
+// ============================================================
+//  HINT
+// ============================================================
+function useHint() {
+  const idx = state.userAnswers.findIndex(a => a === null);
+  if (idx === -1) return;
+  selectBase(state.complement[idx]);
+  showFeedback('success', `💡 ヒント：位置 ${idx+1} の相補塩基は ${state.complement[idx]} です`);
+}
+
+// ============================================================
+//  RENDER
+// ============================================================
+function renderStrands() {
+  const tmpl  = document.getElementById('template-strand');
+  const comp  = document.getElementById('comp-strand');
+  const bonds = document.getElementById('bond-row');
+  tmpl.innerHTML = comp.innerHTML = bonds.innerHTML = '';
+
+  state.template.forEach((base, i) => {
+    // Template node (read-only)
+    const tNode = document.createElement('div');
+    tNode.className = `base-node base-${base}`;
+    tNode.innerHTML = `<span class="base-num">${i+1}</span>${base}`;
+    tmpl.appendChild(tNode);
+
+    // Bond unit
+    const bondsCount = (base === 'G' || base === 'C') ? 3 : 2;
+    const bUnit = document.createElement('div');
+    bUnit.className = 'bond-unit';
+    for (let b = 0; b < bondsCount; b++) {
+      const bl = document.createElement('div');
+      bl.className = 'bond-line';
+      bl.id = `bl-${i}-${b}`;
+      bUnit.appendChild(bl);
+    }
+    bonds.appendChild(bUnit);
+
+    // Comp slot
+    const cNode = document.createElement('div');
+    if (state.userAnswers[i] !== null) {
+      cNode.className = `base-node base-${state.userAnswers[i]}`;
+      cNode.innerHTML = `<span class="base-num">${i+1}</span>${state.userAnswers[i]}`;
+      // also show bond as active
+      const bc = (state.userAnswers[i] === 'G' || state.userAnswers[i] === 'C') ? 3 : 2;
+      for (let b = 0; b < bc; b++) {
+        const bl = document.getElementById(`bl-${i}-${b}`);
+        if (bl) bl.className = 'bond-line' + (bc === 3 ? ' strong' : ' active');
+      }
+    } else {
+      cNode.className = 'base-node empty';
+      cNode.innerHTML = '+';
+      cNode.dataset.slot = i;
+      cNode.onclick = () => onSlotClick(i);
+    }
+    comp.appendChild(cNode);
+  });
+
+  updateProgress();
+}
+
+function renderHP() {
+  const el = document.getElementById('hp-hearts');
+  if (state.maxHP >= 999) { el.innerHTML = ''; return; }
+  el.innerHTML = Array.from({length: state.maxHP}, (_, i) =>
+    `<span class="heart${i >= state.hp ? ' lost' : ''}">❤️</span>`
+  ).join('');
+}
+
+function renderLevelDots() {
+  const el = document.getElementById('level-dots');
+  el.innerHTML = Object.keys(LEVELS).map(k => {
+    const i = parseInt(k);
+    let cls = 'ldot';
+    if (state.clearedLevels.includes(i)) cls += ' done';
+    else if (i === state.level) cls += ' current';
+    return `<div class="${cls}"></div>`;
+  }).join('');
+}
+
+function renderTimer() {
+  const el = document.getElementById('timer-display');
+  if (!state.timerLimit) {
+    const s = state.elapsed;
+    el.textContent = pad2(Math.floor(s/60)) + ':' + pad2(s%60);
+    el.className = 'timer-display';
+  } else {
+    const rem = Math.max(0, state.timerLimit - state.elapsed);
+    el.textContent = pad2(Math.floor(rem/60)) + ':' + pad2(rem%60);
+    el.className = 'timer-display' + (rem <= 10 ? ' urgent' : '');
+  }
+}
+
+function pad2(n) { return String(n).padStart(2,'0'); }
+
+function updateScoreDisplay() {
+  document.getElementById('score-display').textContent = state.score;
+  document.getElementById('combo-display').textContent = comboStr();
+}
+
+function comboStr() {
+  return state.combo === 1 ? '×1' : '×' + state.combo.toFixed(1);
+}
+
+function updateProgress() {
+  const done = state.userAnswers.filter(a => a !== null).length;
+  document.getElementById('progress-fill').style.width = (done / state.template.length * 100) + '%';
+}
+
+// ============================================================
+//  FEEDBACK
+// ============================================================
+function showFeedback(type, msg) {
+  const bar = document.getElementById('feedback-bar');
+  bar.className = 'feedback-bar ' + type;
+  document.getElementById('feedback-msg').textContent = msg;
+  clearTimeout(state.feedbackTimeout);
+  state.feedbackTimeout = setTimeout(() => { bar.className = 'feedback-bar'; }, 2800);
+}
+
+// ============================================================
+//  MISSIONS
+// ============================================================
+function resetMissions(level) {
+  setMission('m1', '—');
+  setMission('m2', level >= 2 ? '—' : 'N/A');
+  setMission('m3', LEVELS[level].timeLimit ? '—' : 'N/A');
+}
+function setMission(id, text, done = false) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'mission-check' + (done ? ' done' : '');
+  el.textContent = done ? '✓' : text;
+}
+
+// ============================================================
+//  WIN
+// ============================================================
+function winGame() {
+  clearInterval(state.timerInterval);
+  state.gameOver = true;
+  cancelDrag(); // clean up any in-progress drag
+
+  const elapsed = state.elapsed;
+  const total = state.template.length;
+  const acc = total === 0 ? 100 : (state.mistakes === 0 ? 100 :
+    Math.max(0, Math.round((1 - state.mistakes / (total + state.mistakes)) * 100)));
+
+  setMission('m1', '', true);
+  if (state.mistakes === 0) setMission('m2', '', true);
+  if (!LEVELS[state.level].timeLimit || elapsed < LEVELS[state.level].timeLimit) setMission('m3', '', true);
+
+  if (!state.clearedLevels.includes(state.level)) {
+    state.clearedLevels.push(state.level);
+    safeSet('biolab_cleared', state.clearedLevels);
+  }
+
+  const xpGain = state.score + (state.mistakes === 0 ? 100 : 0) + (elapsed < 20 ? 50 : 0);
+  state.xp += xpGain;
+  safeSet('biolab_xp', String(state.xp));
+  updateXPBar();
+
+  const newBadges = [];
+  function awardBadge(key) {
+    if (state.badges.includes(key)) return;
+    state.badges.push(key);
+    newBadges.push(key);
+    safeSet('biolab_badges', state.badges);
+    const el = document.getElementById('badge-' + key);
+    if (el) el.classList.add('unlocked');
+  }
+  if (state.level >= 1) awardBadge('rookie');
+  if (state.mistakes === 0) awardBadge('nomiss');
+  if (elapsed < 20) awardBadge('speed');
+  if (state.level >= 3) awardBadge('expert');
+
+  const BADGE_LABELS = {
+    rookie: { icon:'🌱', name:'見習い研究者' },
+    nomiss: { icon:'⚡', name:'完璧な複製' },
+    speed:  { icon:'🚀', name:'スピード解析' },
+    expert: { icon:'🧬', name:'DNAマスター' },
+  };
+
+  document.getElementById('result-icon').textContent = '🎉';
+  document.getElementById('result-title').textContent = 'ステージクリア！';
+  document.getElementById('result-title').className = 'result-title win';
+  document.getElementById('result-msg').textContent = `+${xpGain} XP 獲得！`;
+  document.getElementById('res-score').textContent = state.score;
+  document.getElementById('res-time').textContent = elapsed + 's';
+  document.getElementById('res-acc').textContent = acc + '%';
+
+  const bc = document.getElementById('new-badges');
+  bc.innerHTML = '';
+  newBadges.forEach(b => {
+    const info = BADGE_LABELS[b];
+    if (!info) return;
+    bc.innerHTML += `<div class="new-badge-item"><span style="font-size:24px">${info.icon}</span><div><div class="new-badge-label">NEW BADGE</div><div class="new-badge-name">${info.name}</div></div></div>`;
+    showToast(info.icon, `バッジ獲得：${info.name}`);
+  });
+
+  document.getElementById('next-btn').style.display = state.level < 3 ? 'inline-flex' : 'none';
+  document.getElementById('result-overlay').classList.add('show');
+}
+
+// ============================================================
+//  GAME OVER
+// ============================================================
+function gameOver(reason) {
+  clearInterval(state.timerInterval);
+  state.gameOver = true;
+  cancelDrag();
+
+  const done = state.userAnswers.filter(a => a !== null).length;
+  const acc  = state.template.length > 0 ? Math.round(done / state.template.length * 100) : 0;
+
+  document.getElementById('result-icon').textContent = reason === 'timeout' ? '⏰' : '💀';
+  document.getElementById('result-title').textContent = reason === 'timeout' ? 'タイムアップ！' : 'ゲームオーバー';
+  document.getElementById('result-title').className = 'result-title fail';
+  document.getElementById('result-msg').textContent = reason === 'timeout' ? '制限時間を超えました。もう一度挑戦しよう！' : 'HPが0になりました。もう一度挑戦しよう！';
+  document.getElementById('res-score').textContent = state.score;
+  document.getElementById('res-time').textContent = state.elapsed + 's';
+  document.getElementById('res-acc').textContent = acc + '%';
+  document.getElementById('new-badges').innerHTML = '';
+  document.getElementById('next-btn').style.display = 'none';
+  document.getElementById('result-overlay').classList.add('show');
+}
+
+// ============================================================
+//  TIMER
+// ============================================================
+function tickTimer() {
+  if (state.gameOver) return;
+  state.elapsed++;
+  renderTimer();
+  if (state.timerLimit && state.elapsed >= state.timerLimit) gameOver('timeout');
+}
+
+// ============================================================
+//  NAVIGATION
+// ============================================================
+function goToIntro() {
+  clearInterval(state.timerInterval);
+  cancelDrag();
+  clearSelection();
+  document.getElementById('screen-intro').style.display = 'flex';
+  document.getElementById('screen-game').style.display  = 'none';
+  document.getElementById('result-overlay').classList.remove('show');
+}
+
+function startGame(level) {
+  const cfg = LEVELS[level];
+  if (!cfg) return;
+
+  clearInterval(state.timerInterval);
+  cancelDrag();
+  clearSelection();
+
+  state.level       = level;
+  state.template    = [...cfg.template];
+  state.complement  = cfg.template.map(b => PAIR[b]);
+  state.userAnswers = new Array(cfg.template.length).fill(null);
+  state.selectedBase= null;
+  state.score       = 0;
+  state.combo       = 1;
+  state.mistakes    = 0;
+  state.maxHP       = cfg.maxHP === Infinity ? 999 : cfg.maxHP;
+  state.hp          = state.maxHP;
+  state.timerLimit  = cfg.timeLimit;
+  state.elapsed     = 0;
+  state.gameOver    = false;
+
+  document.getElementById('screen-intro').style.display = 'none';
+  document.getElementById('screen-game').style.display  = 'block';
+  document.getElementById('result-overlay').classList.remove('show');
+  document.getElementById('feedback-bar').className = 'feedback-bar';
+  document.getElementById('level-subtitle').textContent = cfg.name;
+  document.getElementById('current-level-name').textContent = 'Lv.' + level;
+  document.getElementById('hint-btn').style.display = cfg.showHint ? 'inline-flex' : 'none';
+
+  renderHP();
+  renderLevelDots();
+  updateScoreDisplay();
+  renderStrands();
+  resetMissions(level);
+  renderTimer();
+
+  // Always start timer (count-up for Lv.1, count-down for Lv.2/3)
+  state.timerInterval = setInterval(tickTimer, 1000);
+
+  // Refresh badge display
+  ['rookie','nomiss','speed','expert'].forEach(key => {
+    const el = document.getElementById('badge-' + key);
+    if (!el) return;
+    el.classList.toggle('unlocked', state.badges.includes(key));
+  });
+}
+
+function retryGame() { startGame(state.level); }
+function nextLevel()  { startGame(state.level < 3 ? state.level + 1 : state.level); }
+
+// ============================================================
+//  TOAST
+// ============================================================
+let _toastTimer = null;
+function showToast(icon, msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-icon').textContent = icon;
+  document.getElementById('toast-msg').textContent  = msg;
+  t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ============================================================
+//  BOOT
+// ============================================================
+init();
+</script>
+</body>
+</html>
