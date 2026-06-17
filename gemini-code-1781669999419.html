@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>遺伝子増幅技術シミュレーター | バイオテクノロジー</title>
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --success: #2ec4b6;
+            --danger: #e71d36;
+            --dark: #2b2d42;
+            --light: #f8f9fa;
+        }
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', sans-serif;
+            line-height: 1.6;
+            color: var(--dark);
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        h1 {
+            text-align: center;
+            color: var(--dark);
+            border-bottom: 3px solid var(--primary);
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+        }
+        .tab-btn {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #666;
+            transition: 0.3s;
+        }
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom: 4px solid var(--primary);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .panel {
+            background: var(--light);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 5px solid var(--primary);
+        }
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        /* 制限酵素セクションのスタイル */
+        .dna-strand {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 4px;
+            margin: 20px 0;
+            padding: 15px;
+            background: #2b2d42;
+            color: #fff;
+            border-radius: 6px;
+            text-align: center;
+            transition: all 0.5s ease;
+            position: relative;
+        }
+        .cut-line {
+            position: absolute;
+            width: 2px;
+            background: var(--danger);
+            top: 0;
+            bottom: 0;
+            display: none;
+        }
+        .sticky-ends {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+        .dna-fragment {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 20px;
+            font-weight: bold;
+            background: #e2e8f0;
+            padding: 10px;
+            border-radius: 4px;
+            border: 2px dashed var(--primary);
+            animation: fadeIn 0.5s;
+        }
+        /* PCRセクションのスタイル */
+        .pcr-container {
+            display: flex;
+            gap: 20px;
+        }
+        .pcr-controls {
+            flex: 1;
+        }
+        .pcr-visuals {
+            flex: 1;
+            background: #eec;
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 300px;
+            position: relative;
+            background: #1e1e24;
+            color: #fff;
+            overflow-y: auto;
+            max-height: 400px;
+        }
+        .dna-dot {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background-color: var(--success);
+            border-radius: 5px;
+            margin: 3px;
+            animation: pop 0.3s ease-out;
+        }
+        .status-badge {
+            font-size: 18px;
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        .temp-hot { background-color: var(--danger); color: white; }
+        .temp-cool { background-color: var(--primary); color: white; }
+        .temp-opt { background-color: var(--success); color: white; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pop {
+            0% { transform: scale(0); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🧬 遺伝子増幅技術インタラクティブシミュレーター</h1>
+    
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('enzyme')">1. 制限酵素（ハサミの原理）</button>
+        <button class="tab-btn" onclick="switchTab('pcr')">2. PCR法（爆発的増殖）</button>
+    </div>
+
+    <!-- 制限酵素タブ -->
+    <div id="enzyme" class="tab-content active">
+        <div class="panel">
+            <h3>【課題】特定の配列「GAATTC」を見つけて切断せよ！</h3>
+            <p>制限酵素（ここではEcoRI）は、DNAの特定の塩基配列（回文配列）を認識して、決まった形で切断します。ボタンを押して、どのように切れるか観察しましょう。</p>
+        </div>
+        
+        <div style="text-align: center; margin: 20px 0;">
+            <button id="cut-btn" onclick="cutDNA()">制限酵素 EcoRI を投入！</button>
+            <button onclick="resetEnzyme()" style="background-color: #6c757d;">リセット</button>
+        </div>
+
+        <div id="dna-before">
+            <div class="dna-strand" id="strand1">5'- ... C G <span style="color: var(--success);">G A A T T C</span> G C ... -3'</div>
+            <div class="dna-strand" id="strand2">3'- ... G C <span style="color: var(--success);">C T T A A G</span> C G ... -5'</div>
+        </div>
+
+        <div class="sticky-ends" id="dna-after" style="display: none;">
+            <div class="dna-fragment">
+                <strong>断片A（左側）</strong><br>
+                5'- ... C G G<br>
+                3'- ... G C C T T A A
+            </div>
+            <div class="dna-fragment" style="border-color: var(--danger);">
+                <strong>粘着末端（切り口が噛み合う）</strong><br>
+                <span style="color: var(--danger);">A A T T C</span> G C ... -3'<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;G C ... -5'
+            </div>
+        </div>
+        
+        <p style="margin-top: 20px; font-size: 14px; color: #555;" id="enzyme-desc">
+            ※切断ボタンを押すと、互い違いの切り口（粘着末端）ができることが分かります。ここに同じ酵素で切った別の遺伝子（インスリンなど）を近づけると、ぴったり結合（クローニング）できます。
+        </p>
+    </div>
+
+    <!-- PCRタブ -->
+    <div id="pcr" class="tab-content">
+        <div class="panel">
+            <h3>【課題】熱サイクルを回して、DNAを倍々に増やせ！</h3>
+            <p>PCRは「熱をかける・下げる」を繰り返すだけで、試験管の中でDNAを倍増させます。1ステップずつ進めて、数変化を追ってみましょう。</p>
+        </div>
+
+        <div class="pcr-container">
+            <div class="pcr-controls">
+                <div style="margin-bottom: 15px;">
+                    <span id="pcr-status" class="status-badge temp-cool">準備完了（室温）</span>
+                    <div id="pcr-step-text" style="font-weight: bold; margin-top: 5px;">現在のサイクル: 0</div>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button id="pcr-next-btn" onclick="advancePCR()">次のステップへ進む</button>
+                    <button onclick="resetPCR()" style="background-color: #6c757d;">最初からやり直す</button>
+                </div>
+
+                <div style="margin-top: 25px; background: #eee; padding: 15px; border-radius: 6px;">
+                    <h4 style="margin-top:0;">📊 観測データ</h4>
+                    <p>経過した熱サイクル: <span id="data-cycle" style="font-weight:bold; color:var(--primary);">0</span> 回</p>
+                    <p>試験管内のDNA分子数: <span id="data-count" style="font-weight:bold; color:var(--danger); font-size: 20px;">1</span> 分子</p>
+                    <p style="font-size: 13px; color: #555;">※30サイクル繰り返すと、理論上は <strong>1,073,741,824分子（約10億倍）</strong> に達します！</p>
+                </div>
+            </div>
+
+            <div class="pcr-visuals">
+                <h4 style="margin-top:0; border-bottom: 1px solid #444; padding-bottom: 5px;">🔬 試験管内の可視化（DNA断片のイメージ）</h4>
+                <div id="dna-pool">
+                    <div class="dna-dot"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // タブ切り替えシステム
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        
+        event.currentTarget.classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+    }
+
+    // 制限酵素ロジック
+    function cutDNA() {
+        document.getElementById('strand1').innerHTML = "5'- ... C G <span style='color:var(--danger);'>G</span> &nbsp; &nbsp; &nbsp; &nbsp; <span style='color:var(--success);'>A A T T C</span> G C ... -3'";
+        document.getElementById('strand2').innerHTML = "3'- ... G C <span style='color:var(--success);'>C T T A A</span> &nbsp; &nbsp; &nbsp; &nbsp; <span style='color:var(--danger);'>G</span> C ... -5'";
+        document.getElementById('dna-after').style.display = 'flex';
+        document.getElementById('cut-btn').disabled = true;
+    }
+    
+    function resetEnzyme() {
+        document.getElementById('strand1').innerHTML = "5'- ... C G <span style='color: var(--success);'>G A A T T C</span> G C ... -3'";
+        document.getElementById('strand2').innerHTML = "3'- ... G C <span style='color: var(--success);'>C T T A A G</span> C G ... -5'";
+        document.getElementById('dna-after').style.display = 'none';
+        document.getElementById('cut-btn').disabled = false;
+    }
+
+    // PCRロジック
+    let pcrCycle = 0;
+    let pcrStep = 0; // 0:熱変性, 1:アニール, 2:伸長
+    let dnaCount = 1;
+
+    const stepsInfo = [
+        { name: "① 熱変性（約95℃）", class: "temp-hot", desc: "高温でDNAの二本鎖が解離して1本鎖になります！" },
+        { name: "② アニール（約60℃）", class: "temp-cool", desc: "温度を下げて、目印となるプライマーを結合させます！" },
+        { name: "③ 伸長反応（約72℃）", class: "temp-opt", desc: "酵素（ポリメラーゼ）が働き、DNA鎖をコピーします！数が2倍に！" }
+    ];
+
+    function advancePCR() {
+        if(dnaCount >= 1024) {
+            alert("画面がドットで埋まるため、シミュレーションは10サイクル（1024分子）でストップしています。実際の試験管ではこれが30サイクル以上続きます！");
+            return;
+        }
+
+        pcrStep = (pcrStep + 1) % 3;
+        
+        if (pcrStep === 0) {
+            pcrCycle++;
+        }
+
+        let currentInfo = stepsInfo[pcrStep];
+        let statusBadge = document.getElementById('pcr-status');
+        statusBadge.className = "status-badge " + currentInfo.class;
+        statusBadge.innerText = currentInfo.name;
+        
+        document.getElementById('pcr-step-text').innerText = `サイクル: ${pcrCycle} / ステップ: ${currentInfo.desc}`;
+
+        if (pcrStep === 2) { // 伸長ステップ完了時に実際に倍増
+            dnaCount = dnaCount * 2;
+            updateDNAVisuals();
+        }
+
+        document.getElementById('data-cycle').innerText = pcrCycle;
+        document.getElementById('data-count').innerText = dnaCount.toLocaleString();
+    }
+
+    function updateDNAVisuals() {
+        const pool = document.getElementById('dna-pool');
+        pool.innerHTML = '';
+        for(let i=0; i<dnaCount; i++) {
+            const dot = document.createElement('div');
+            dot.className = 'dna-dot';
+            pool.appendChild(dot);
+        }
+    }
+
+    function resetPCR() {
+        pcrCycle = 0;
+        pcrStep = 0;
+        dnaCount = 1;
+        
+        let statusBadge = document.getElementById('pcr-status');
+        statusBadge.className = "status-badge temp-cool";
+        statusBadge.innerText = "準備完了（室温）";
+        
+        document.getElementById('pcr-step-text').innerText = "現在のサイクル: 0";
+        document.getElementById('data-cycle').innerText = "0";
+        document.getElementById('data-count').innerText = "1";
+        updateDNAVisuals();
+    }
+</script>
+
+</body>
+</html>
