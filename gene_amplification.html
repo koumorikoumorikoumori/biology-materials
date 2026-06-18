@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>遺伝子を増やす技術 — 課題解決シミュレーター</title>
+<style>
+:root{
+  --bg:#f4f7fb;--card:#fff;--border:#d4dde8;
+  --ink:#16202e;--ink2:#52617a;--ink3:#94a2b8;
+  --dna1:#1a6e8e;--dna2:#0d4a5c;
+  --pcr:#b8430a;--pcr2:#e8650a;
+  --clone:#2a7048;--clone2:#3a9060;
+  --enz:#8a3098;--enz2:#a850b8;
+  --gold:#c89020;--ok:#16803c;--ng:#b91c1c;
+  --plasmid:#7a5010;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans JP',system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+
+#hdr{background:linear-gradient(135deg,#0d2a3c,#1a4a5c);color:#fff;padding:18px 24px}
+#hdr h1{font-size:1.3rem;font-weight:700;letter-spacing:.03em;margin-bottom:3px}
+#hdr p{font-size:.8rem;opacity:.85}
+
+/* ── MISSION BANNER ── */
+.mission{
+  background:linear-gradient(135deg,#fff4e6,#ffe8cc);border:2px solid var(--pcr);
+  border-radius:10px;margin:16px;padding:16px 20px;display:flex;gap:16px;align-items:center;
+}
+.mission-icon{font-size:2.6rem}
+.mission h2{font-size:1.05rem;color:var(--pcr);margin-bottom:4px;font-weight:700}
+.mission p{font-size:.86rem;color:var(--ink2);line-height:1.5}
+
+/* ── TABS ── */
+.tab-nav{display:flex;gap:0;padding:0 16px;flex-wrap:wrap}
+.tab-btn{
+  padding:11px 18px;font-size:.86rem;font-weight:600;color:var(--ink3);
+  background:#e6edf5;border:none;cursor:pointer;border-radius:8px 8px 0 0;
+  margin-right:4px;border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap;
+}
+.tab-btn.active{color:#fff;background:var(--dna1);border-bottom-color:var(--gold)}
+
+.tab-pane{display:none;padding:18px 16px 36px;max-width:1080px;margin:0 auto}
+.tab-pane.active{display:block;animation:fade .3s}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.panel{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.panel h3{font-size:1rem;color:var(--dna2);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.panel p{font-size:.86rem;color:var(--ink2);line-height:1.65;margin-bottom:8px}
+.hint-q{background:#fffbe8;border-left:4px solid var(--gold);padding:10px 14px;border-radius:0 6px 6px 0;font-size:.85rem;color:#6a5010;margin:10px 0}
+
+/* ── BUTTONS ── */
+.btn{padding:9px 20px;border-radius:6px;border:none;font-size:.86rem;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:.02em}
+.btn-pcr{background:var(--pcr);color:#fff}.btn-pcr:hover{background:var(--pcr2)}
+.btn-clone{background:var(--clone);color:#fff}.btn-clone:hover{background:var(--clone2)}
+.btn-enz{background:var(--enz);color:#fff}.btn-enz:hover{background:var(--enz2)}
+.btn-ghost{background:#fff;color:var(--ink2);border:1.5px solid var(--border)}
+.btn-ghost:hover{border-color:var(--dna1);color:var(--dna1)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+
+/* ════ INTRO / MISSION TAB ════ */
+.method-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+@media(max-width:680px){.method-cards{grid-template-columns:1fr}}
+.method-card{border:2px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:all .2s;background:#fff}
+.method-card:hover{transform:translateY(-3px);box-shadow:0 6px 16px rgba(0,0,0,.1)}
+.method-card.pcr-card:hover{border-color:var(--pcr)}
+.method-card.clone-card:hover{border-color:var(--clone)}
+.method-card h4{font-size:1rem;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.method-card.pcr-card h4{color:var(--pcr)}
+.method-card.clone-card h4{color:var(--clone)}
+.method-card p{font-size:.8rem;color:var(--ink2);line-height:1.55}
+.method-card .tagline{font-size:.74rem;color:var(--ink3);margin-top:8px;font-style:italic}
+
+/* ════ PCR SIMULATOR ════ */
+.pcr-stage{background:#0d1820;border-radius:10px;padding:20px;margin:14px 0;min-height:280px;position:relative;overflow:hidden}
+.pcr-temp-display{display:flex;justify-content:center;gap:20px;margin-bottom:16px;flex-wrap:wrap}
+.temp-step{padding:8px 16px;border-radius:8px;font-size:.82rem;font-weight:700;border:2px solid;transition:all .3s;opacity:.4}
+.temp-step.active{opacity:1;transform:scale(1.08)}
+.temp-denature{color:#ff6040;border-color:#ff6040;background:rgba(255,96,64,.12)}
+.temp-anneal{color:#40a0e0;border-color:#40a0e0;background:rgba(64,160,224,.12)}
+.temp-extend{color:#40e080;border-color:#40e080;background:rgba(64,224,128,.12)}
+
+.dna-arena{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-content:center;min-height:160px;padding:10px}
+.dna-mol{
+  width:46px;height:14px;border-radius:7px;position:relative;transition:all .5s;
+  display:flex;align-items:center;justify-content:center;
+}
+.dna-double{background:linear-gradient(90deg,var(--dna1),var(--dna2))}
+.dna-single{height:6px;border-radius:3px}
+.dna-top{background:#ff8060}.dna-bottom{background:#60a0ff}
+@keyframes pop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.dna-mol.new{animation:pop .4s ease}
+
+.pcr-counter{display:flex;justify-content:space-around;margin:14px 0;flex-wrap:wrap;gap:10px}
+.counter-box{text-align:center;background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 18px;min-width:100px}
+.counter-box .num{font-size:1.8rem;font-weight:700;color:var(--pcr)}
+.counter-box .lbl{font-size:.72rem;color:var(--ink3)}
+
+.cycle-log{background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 14px;max-height:140px;overflow-y:auto;margin-top:10px;font-size:.78rem}
+.cycle-log div{padding:3px 0;border-bottom:1px solid #f0f0f0;color:var(--ink2)}
+
+/* PCR chart */
+.pcr-chart{display:flex;align-items:flex-end;gap:3px;height:120px;padding:10px;background:#fff;border:1px solid var(--border);border-radius:8px;margin-top:10px;overflow-x:auto}
+.chart-bar{min-width:18px;background:linear-gradient(180deg,var(--pcr2),var(--pcr));border-radius:3px 3px 0 0;position:relative;transition:height .4s;display:flex;align-items:flex-start;justify-content:center}
+.chart-bar span{font-size:.6rem;color:#fff;margin-top:2px;writing-mode:vertical-rl;white-space:nowrap}
+.chart-label{font-size:.62rem;color:var(--ink3);text-align:center;min-width:18px}
+
+/* ════ ENZYME (制限酵素) ════ */
+.enzyme-stage{background:#1a1020;border-radius:10px;padding:20px;margin:14px 0;min-height:200px}
+.dna-sequence{font-family:'Courier New',monospace;font-size:1.1rem;letter-spacing:2px;text-align:center;color:#e0d0f0;margin:20px 0;line-height:2.2;position:relative}
+.recognition-site{background:rgba(168,80,184,.3);border:1px solid var(--enz2);border-radius:3px;padding:1px 2px;cursor:pointer;transition:all .2s}
+.recognition-site:hover{background:rgba(168,80,184,.6)}
+.recognition-site.cut{background:rgba(255,80,80,.4);border-color:#ff5050}
+.cut-mark{color:#ff5050;font-weight:700}
+.scissors{font-size:1.4rem;animation:snip .5s ease}
+@keyframes snip{0%,100%{transform:rotate(0)}50%{transform:rotate(-20deg)}}
+
+/* ════ CLONING ════ */
+.clone-stage{background:#0d1f14;border-radius:10px;padding:20px;margin:14px 0;min-height:280px;position:relative}
+.clone-step-indicator{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;justify-content:center}
+.clone-step{padding:6px 12px;border-radius:16px;font-size:.74rem;font-weight:700;border:1.5px solid var(--clone2);color:var(--clone2);opacity:.4;transition:all .3s}
+.clone-step.active{opacity:1;background:rgba(58,144,96,.2)}
+.clone-step.done{opacity:1;background:var(--clone);color:#fff}
+
+.plasmid-area{display:flex;justify-content:center;align-items:center;min-height:180px;position:relative}
+.bacterium{position:absolute;font-size:1.6rem;transition:all .8s}
+
+.clone-viz{position:relative;width:100%;height:180px}
+
+/* ════ COMPARISON ════ */
+.compare-table{width:100%;border-collapse:collapse;margin-top:10px;font-size:.82rem}
+.compare-table th{background:var(--dna2);color:#fff;padding:10px;text-align:left;font-weight:700}
+.compare-table th.pcr-col{background:var(--pcr)}
+.compare-table th.clone-col{background:var(--clone)}
+.compare-table td{padding:10px;border:1px solid var(--border);background:#fff}
+.compare-table tr:nth-child(even) td{background:#f8fafc}
+.compare-table .row-label{font-weight:700;background:#eef2f7!important;color:var(--ink)}
+
+.reveal-btn{cursor:pointer;color:var(--ink3);font-size:.78rem;text-decoration:underline;background:none;border:none}
+.hidden-answer{filter:blur(5px);transition:filter .3s;cursor:pointer}
+.hidden-answer.revealed{filter:none}
+
+#ftr{text-align:center;padding:16px;font-size:.72rem;color:var(--ink3);border-top:1px solid var(--border)}
+.result-msg{margin-top:12px;padding:10px 14px;border-radius:8px;font-size:.85rem;font-weight:600}
+.result-ok{background:#f0fdf4;color:var(--ok);border:1.5px solid #86efac}
+.result-info{background:#eff6ff;color:#1a5090;border:1.5px solid #93c5fd}
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <h1>🧬 遺伝子を増やす技術 — 課題解決シミュレーター</h1>
+  <p>高校生物 バイオテクノロジー 第1時 / 「ある遺伝子を大量に手に入れるには？」</p>
+</div>
+
+<div class="mission">
+  <div class="mission-icon">🎯</div>
+  <div>
+    <h2>ミッション：インスリン遺伝子を「大量に」増やせ！</h2>
+    <p>あなたは製薬会社の研究員。糖尿病の薬「ヒトのインスリン」を大量生産するため，手元のたった1分子のインスリン遺伝子を，数億〜数十億倍に増やしたい。どんな技術が使えるか，実際に試しながら考えよう。</p>
+  </div>
+</div>
+
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="showTab('intro')">🎯 課題を知る</button>
+  <button class="tab-btn" onclick="showTab('enzyme')">✂️ 道具：制限酵素</button>
+  <button class="tab-btn" onclick="showTab('clone')">🦠 方法A：クローニング</button>
+  <button class="tab-btn" onclick="showTab('pcr')">🔥 方法B：PCR</button>
+  <button class="tab-btn" onclick="showTab('compare')">⚖️ 比べてみる</button>
+</div>
+
+<!-- ════ TAB: INTRO ════ -->
+<div id="tab-intro" class="tab-pane active">
+  <div class="panel">
+    <h3>🤔 考えてみよう</h3>
+    <p>あなたの手元には，ヒトの細胞から取り出した<strong>たった1分子のインスリン遺伝子</strong>がある。これを薬の研究に使うには，<strong>何十億分子も</strong>必要だ。しかし1分子では何もできない。</p>
+    <div class="hint-q">💭 問い：1分子のDNAを，数十億倍に増やすには，どんな方法が考えられるだろうか？</div>
+    <p>歴史上，科学者は<strong>2つの全く異なるアプローチ</strong>を考え出した。それぞれを試してみよう。</p>
+    <div class="method-cards">
+      <div class="method-card clone-card" onclick="showTab('clone')">
+        <h4>🦠 方法A：クローニング（生物に増やしてもらう）</h4>
+        <p>大腸菌などの生物にDNAを運び込み，細菌が20分に1回分裂・増殖する力を利用して，DNAごと大量に複製させる。</p>
+        <p class="tagline">→ 生きた細胞の増殖力を借りて増やす</p>
+      </div>
+      <div class="method-card pcr-card" onclick="showTab('pcr')">
+        <h4>🔥 方法B：PCR（試験管の中で増やす）</h4>
+        <p>DNAを複製する酵素（DNAポリメラーゼ）を使い，試験管の中で温度を変えるだけで，DNAを2倍→4倍→8倍…と増やす。</p>
+        <p class="tagline">→ 生物を使わず，化学反応だけで増やす</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ TAB: PCR ════ -->
+<div id="tab-pcr" class="tab-pane">
+  <div class="panel">
+    <h3>🔥 方法A：PCR（ポリメラーゼ連鎖反応）</h3>
+    <p>PCRは<strong>3つの温度</strong>を繰り返すだけでDNAを増やす。1サイクルで<strong>2倍</strong>になる。実際にサイクルを回してみよう。</p>
+    <div class="hint-q">💭 ボタンを押すたびに何が起こる？分子数はどう変化する？「数十億倍」には何サイクル必要だろうか？</div>
+
+    <div class="pcr-temp-display">
+      <div class="temp-step temp-denature" id="step-denature">① 変性 95℃<br><small>2本鎖をほどく</small></div>
+      <div class="temp-step temp-anneal" id="step-anneal">② アニーリング 60℃<br><small>プライマーが結合</small></div>
+      <div class="temp-step temp-extend" id="step-extend">③ 伸長 72℃<br><small>新しい鎖を合成</small></div>
+    </div>
+
+    <div class="pcr-stage">
+      <div class="dna-arena" id="pcr-arena"></div>
+    </div>
+
+    <div class="pcr-counter">
+      <div class="counter-box"><div class="num" id="pcr-cycle">0</div><div class="lbl">サイクル数</div></div>
+      <div class="counter-box"><div class="num" id="pcr-count">1</div><div class="lbl">DNA分子数</div></div>
+      <div class="counter-box"><div class="num" id="pcr-formula" style="font-size:1.1rem">2⁰ = 1</div><div class="lbl">計算式</div></div>
+    </div>
+
+    <div class="pcr-chart" id="pcr-chart"></div>
+
+    <div class="btn-row">
+      <button class="btn btn-pcr" onclick="runPCRCycle()">▶ 1サイクル進める</button>
+      <button class="btn btn-pcr" onclick="runPCRMany(5)">⏩ 5サイクル一気に</button>
+      <button class="btn btn-ghost" onclick="resetPCR()">リセット</button>
+    </div>
+    <div id="pcr-result"></div>
+    <div class="cycle-log" id="pcr-log"></div>
+  </div>
+</div>
+
+<!-- ════ TAB: ENZYME ════ -->
+<div id="tab-enzyme" class="tab-pane">
+  <div class="panel">
+    <h3>✂️ 道具：制限酵素（DNAを切るハサミ）</h3>
+    <p>クローニングをするには，まずプラスミド（運び屋）の輪と目的の遺伝子を<strong>切る</strong>道具と，それらを<strong>つなぐ</strong>道具が必要だ。「ひも」を切り貼りする様子をイメージして，どんな道具（酵素）が必要か予想してみよう。</p>
+    <div class="hint-q">💭 思考の足場：①「切る」ハサミの役割をする酵素は？　②「つなぐ」のりの役割をする酵素は？　予想してから下で確かめよう。</div>
+    <p>切る道具が<strong>制限酵素</strong>だ。制限酵素は，特定の塩基配列（認識配列）を見つけて，そこだけを切る。下のDNA配列から「EcoRI」の認識配列「GAATTC」を探して，クリックで切ってみよう。</p>
+
+    <div class="enzyme-stage">
+      <div style="text-align:center;margin-bottom:8px;color:#a850b8;font-size:.82rem;font-weight:700">
+        制限酵素 EcoRI の認識配列：<span style="font-family:monospace;font-size:1rem">G▼AATTC</span>
+      </div>
+      <div class="dna-sequence" id="enzyme-dna"></div>
+      <div style="text-align:center;margin-top:10px;color:#c0a0d0;font-size:.78rem" id="enzyme-status">
+        オレンジ色に光る「GAATTC」をクリックして切断しよう
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-enz" onclick="autoFindSites()">🔍 認識配列をハイライト</button>
+      <button class="btn btn-ghost" onclick="resetEnzyme()">リセット</button>
+    </div>
+    <div id="enzyme-result"></div>
+
+    <div class="panel" style="margin-top:14px;background:#faf6fc">
+      <h3 style="color:#8a3098">💡 切った後の「のりしろ」がポイント</h3>
+      <p>EcoRIが切ると，下のように<strong>互い違いの断面（粘着末端・スティッキーエンド）</strong>ができる。この「のりしろ」が，あとで別のDNAと<strong>つなぐ</strong>ときに重要になる。</p>
+      <div style="font-family:monospace;font-size:1rem;text-align:center;background:#fff;padding:14px;border-radius:8px;line-height:1.8;color:#333">
+        5'...G &nbsp;&nbsp;&nbsp;&nbsp;AATTC...3'<br>
+        3'...CTTAA &nbsp;&nbsp;&nbsp;&nbsp;G...5'<br>
+        <span style="color:#a850b8;font-size:.78rem">↑この突き出た「AATT」がのりしろになる</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ TAB: CLONE ════ -->
+<div id="tab-clone" class="tab-pane">
+  <div class="panel">
+    <h3>🦠 方法A：DNAクローニング（大腸菌に増やしてもらう）</h3>
+    <p>クローニングは<strong>4ステップ</strong>。順番にボタンを押して，大腸菌に遺伝子を運び込み，増やしてみよう。</p>
+    <div class="hint-q">💭 各ステップで「制限酵素」「DNAリガーゼ」「プラスミド」がどう使われる？なぜ生物の力を借りると大量に増えるのか？</div>
+
+    <div class="clone-step-indicator">
+      <div class="clone-step" id="cstep-1">① 切り出す</div>
+      <div class="clone-step" id="cstep-2">② つなぐ</div>
+      <div class="clone-step" id="cstep-3">③ 入れる</div>
+      <div class="clone-step" id="cstep-4">④ 増やす</div>
+    </div>
+
+    <div class="clone-stage">
+      <div class="clone-viz" id="clone-viz"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-clone" id="clone-next-btn" onclick="cloneNextStep()">▶ 次のステップ</button>
+      <button class="btn btn-ghost" onclick="resetClone()">最初から</button>
+    </div>
+    <div id="clone-explain" class="result-msg result-info" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ════ TAB: COMPARE ════ -->
+<div id="tab-compare" class="tab-pane">
+  <div class="panel">
+    <h3>⚖️ 2つの方法を比べてみよう</h3>
+    <p>PCRとクローニング，両方を試した今なら違いがわかるはず。下の表の「？」を考えてから，クリックして答えを確認しよう。</p>
+    <table class="compare-table">
+      <tr>
+        <th class="row-label" style="background:var(--dna2)!important">比較項目</th>
+        <th class="pcr-col">🔥 PCR</th>
+        <th class="clone-col">🦠 クローニング</th>
+      </tr>
+      <tr>
+        <td class="row-label">増やす場所</td>
+        <td>試験管の中（in vitro）</td>
+        <td>生きた細胞の中（in vivo）</td>
+      </tr>
+      <tr>
+        <td class="row-label">増やす力の源</td>
+        <td class="hidden-answer" onclick="this.classList.toggle('revealed')">DNAポリメラーゼ（酵素反応）</td>
+        <td class="hidden-answer" onclick="this.classList.toggle('revealed')">大腸菌の増殖（細胞分裂）</td>
+      </tr>
+      <tr>
+        <td class="row-label">必要な時間</td>
+        <td class="hidden-answer" onclick="this.classList.toggle('revealed')">数時間（速い）</td>
+        <td class="hidden-answer" onclick="this.classList.toggle('revealed')">1日〜数日（遅い）</td>
+      </tr>
+      <tr>
+        <td class="row-label">必要な道具</td>
+        <td class="hidden-answer" onclick="this.classList.toggle('revealed')">プライマー・耐熱性ポリメラーゼ・サーマルサイクラー</td>
+        <td class="hidden-answer" onclick="this.classList.toggle('revealed')">制限酵素・DNAリガーゼ・プラスミド・大腸菌</td>
+      </tr>
+      <tr>
+        <td class="row-label">得意なこと</td>
+        <td class="hidden-answer" onclick="this.classList.toggle('revealed')">特定の短い配列を素早く大量に</td>
+        <td class="hidden-answer" onclick="this.classList.toggle('revealed')">遺伝子を生物に組み込み，タンパク質も作れる</td>
+      </tr>
+    </table>
+    <p style="margin-top:14px;font-size:.78rem;color:var(--ink3)">（灰色のセルをクリックすると答えが見えます）</p>
+  </div>
+
+  <div class="panel">
+    <h3>🎯 ミッションの答え</h3>
+    <p>「ある遺伝子を大量に手に入れる」には，目的によって方法を選ぶ：</p>
+    <p>・<strong style="color:var(--pcr)">とにかく速く・大量に増やしたい</strong> → PCR</p>
+    <p>・<strong style="color:var(--clone)">増やした遺伝子を生物に働かせ，タンパク質（インスリン）を作らせたい</strong> → クローニング（遺伝子組換え）</p>
+    <div class="result-msg result-ok" style="margin-top:10px">
+      💡 実際の医療では，PCRで増やした遺伝子をクローニングで大腸菌に組み込み，インスリンを大量生産している。<strong>2つの技術は組み合わせて使われる</strong>のだ！
+    </div>
+  </div>
+</div>
+
+<div id="ftr">高校生物 バイオテクノロジー 第1時 — 遺伝子を増やす技術 © 2026</div>
+
+<script>
+'use strict';
+
+// ════════════════ TAB NAVIGATION ════════════════
+function showTab(t){
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  document.querySelector(`[onclick="showTab('${t}')"]`).classList.add('active');
+}
+
+// ════════════════ PCR SIMULATOR ════════════════
+let pcrCycle = 0;
+let pcrCount = 1;
+const pcrHistory = [1];
+const PCR_MAX_VISUAL = 64; // cap visual molecules
+
+function renderPCRArena(){
+  const arena = document.getElementById('pcr-arena');
+  arena.innerHTML = '';
+  const show = Math.min(pcrCount, PCR_MAX_VISUAL);
+  for(let i=0;i<show;i++){
+    const mol = document.createElement('div');
+    mol.className = 'dna-mol dna-double new';
+    arena.appendChild(mol);
+  }
+  if(pcrCount > PCR_MAX_VISUAL){
+    const more = document.createElement('div');
+    more.style.cssText = 'color:#ffa040;font-size:.8rem;align-self:center;margin-left:8px;font-weight:700';
+    more.textContent = `…他 ${(pcrCount-PCR_MAX_VISUAL).toLocaleString()} 分子`;
+    arena.appendChild(more);
+  }
+}
+
+function renderPCRChart(){
+  const chart = document.getElementById('pcr-chart');
+  chart.innerHTML = '';
+  const max = Math.max(...pcrHistory);
+  pcrHistory.forEach((v,i)=>{
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center';
+    const bar = document.createElement('div');
+    bar.className = 'chart-bar';
+    const h = Math.max(4, (v/max)*100);
+    bar.style.height = h+'px';
+    const lbl = document.createElement('div');
+    lbl.className = 'chart-label';
+    lbl.textContent = i;
+    wrap.appendChild(bar);
+    wrap.appendChild(lbl);
+    chart.appendChild(wrap);
+  });
+}
+
+async function animateTempSteps(){
+  const steps = ['step-denature','step-anneal','step-extend'];
+  for(const s of steps){
+    document.querySelectorAll('.temp-step').forEach(e=>e.classList.remove('active'));
+    document.getElementById(s).classList.add('active');
+    await new Promise(r=>setTimeout(r,300));
+  }
+  document.querySelectorAll('.temp-step').forEach(e=>e.classList.remove('active'));
+}
+
+function pcrLog(msg){
+  const log = document.getElementById('pcr-log');
+  const d = document.createElement('div');
+  d.textContent = msg;
+  log.insertBefore(d, log.firstChild);
+}
+
+async function runPCRCycle(){
+  pcrCycle++;
+  pcrCount *= 2;
+  pcrHistory.push(pcrCount);
+  await animateTempSteps();
+  document.getElementById('pcr-cycle').textContent = pcrCycle;
+  document.getElementById('pcr-count').textContent = pcrCount.toLocaleString();
+  document.getElementById('pcr-formula').textContent = `2^${pcrCycle} = ${pcrCount.toLocaleString()}`;
+  renderPCRArena();
+  renderPCRChart();
+  pcrLog(`サイクル${pcrCycle}：2本鎖をほどき→複製→ ${(pcrCount/2).toLocaleString()}個が${pcrCount.toLocaleString()}個に倍増`);
+  checkPCRMilestone();
+}
+
+async function runPCRMany(n){
+  for(let i=0;i<n;i++){ await runPCRCycle(); await new Promise(r=>setTimeout(r,150)); }
+}
+
+function checkPCRMilestone(){
+  const res = document.getElementById('pcr-result');
+  if(pcrCount >= 1000000000){
+    res.innerHTML = `<div class="result-msg result-ok">🎉 ${pcrCount.toLocaleString()}分子に到達！わずか${pcrCycle}サイクルで<strong>10億倍</strong>を突破！これがPCRの「指数的増幅」の力だ。</div>`;
+  } else if(pcrCount >= 1000000){
+    res.innerHTML = `<div class="result-msg result-info">💡 ${pcrCount.toLocaleString()}分子（100万超）！あと少しで10億。指数関数の増え方を実感しよう。</div>`;
+  } else {
+    res.innerHTML = '';
+  }
+}
+
+function resetPCR(){
+  pcrCycle = 0; pcrCount = 1;
+  pcrHistory.length = 0; pcrHistory.push(1);
+  document.getElementById('pcr-cycle').textContent = '0';
+  document.getElementById('pcr-count').textContent = '1';
+  document.getElementById('pcr-formula').textContent = '2⁰ = 1';
+  document.getElementById('pcr-log').innerHTML = '';
+  document.getElementById('pcr-result').innerHTML = '';
+  renderPCRArena();
+  renderPCRChart();
+}
+
+// ════════════════ ENZYME (制限酵素) ════════════════
+const ENZYME_SEQ = 'ATCGGAATTCGCTAGCTAGGAATTCCGTAAGCTTGAATTCAACGT';
+const RECOG = 'GAATTC';
+let cutSites = [];
+
+function renderEnzymeDNA(highlight){
+  const container = document.getElementById('enzyme-dna');
+  const seq = ENZYME_SEQ;
+  let html = '';
+  let i = 0;
+  while(i < seq.length){
+    if(seq.substr(i,6) === RECOG){
+      const idx = i;
+      const isCut = cutSites.includes(idx);
+      html += `<span class="recognition-site ${isCut?'cut':''}" data-idx="${idx}" onclick="cutSite(${idx})">`;
+      if(isCut){
+        html += `G<span class="cut-mark">▼</span>AATTC`;
+      } else {
+        html += `GAATTC`;
+      }
+      html += `</span>`;
+      i += 6;
+    } else {
+      html += `<span style="opacity:.6">${seq[i]}</span>`;
+      i++;
+    }
+  }
+  container.innerHTML = html;
+}
+
+function cutSite(idx){
+  if(!cutSites.includes(idx)){
+    cutSites.push(idx);
+    renderEnzymeDNA();
+    updateEnzymeStatus();
+  }
+}
+
+function autoFindSites(){
+  const status = document.getElementById('enzyme-status');
+  let count = 0;
+  let i = 0;
+  while(i < ENZYME_SEQ.length){
+    if(ENZYME_SEQ.substr(i,6) === RECOG){ count++; i += 6; } else { i++; }
+  }
+  status.innerHTML = `🔍 この配列には認識配列「GAATTC」が<strong style="color:#e8a0f0">${count}か所</strong>ある。クリックして切ってみよう。`;
+  renderEnzymeDNA();
+}
+
+function updateEnzymeStatus(){
+  let total = 0; let i = 0;
+  while(i < ENZYME_SEQ.length){ if(ENZYME_SEQ.substr(i,6)===RECOG){total++;i+=6;}else{i++;} }
+  const res = document.getElementById('enzyme-result');
+  if(cutSites.length === total){
+    res.innerHTML = `<div class="result-msg result-ok">✂️ ${total}か所すべてを切断！これでDNAが断片に分かれ，目的の遺伝子を取り出せる。次は「クローニング」で大腸菌に入れてみよう。</div>`;
+  } else {
+    res.innerHTML = `<div class="result-msg result-info">${cutSites.length} / ${total} か所を切断中...</div>`;
+  }
+}
+
+function resetEnzyme(){
+  cutSites = [];
+  document.getElementById('enzyme-result').innerHTML = '';
+  document.getElementById('enzyme-status').innerHTML = 'オレンジ色に光る「GAATTC」をクリックして切断しよう';
+  renderEnzymeDNA();
+}
+
+// ════════════════ CLONING ════════════════
+let cloneStep = 0;
+const cloneExplains = [
+  '',
+  '① <strong>制限酵素</strong>で，目的の遺伝子（インスリン遺伝子）と，運び屋となる<strong>プラスミド</strong>（細菌の小さな環状DNA）を，同じ酵素で切る。すると同じ「のりしろ」ができる。',
+  '② <strong>DNAリガーゼ</strong>（のり）を使って，遺伝子とプラスミドの「のりしろ」をつなぎ合わせる。これで遺伝子が組み込まれた「組換えプラスミド」が完成（＝遺伝子組換え）。',
+  '③ 組換えプラスミドを<strong>大腸菌</strong>に取り込ませる（形質転換）。これで大腸菌は目的の遺伝子を持つようになる。',
+  '④ 大腸菌を培養すると，<strong>分裂して増える</strong>たびにプラスミドごと遺伝子もコピーされる。一晩で数十億個に！こうして遺伝子が大量に増える。',
+];
+
+function renderCloneStep(){
+  const viz = document.getElementById('clone-viz');
+  // Update step indicators
+  for(let i=1;i<=4;i++){
+    const el = document.getElementById('cstep-'+i);
+    el.classList.remove('active','done');
+    if(i < cloneStep) el.classList.add('done');
+    else if(i === cloneStep) el.classList.add('active');
+  }
+
+  let svg = '';
+  if(cloneStep === 0){
+    viz.innerHTML = '<div style="text-align:center;color:#80c0a0;padding-top:70px;font-size:.9rem">「次のステップ」を押して，クローニングを始めよう</div>';
+    return;
+  }
+  if(cloneStep === 1){
+    // DNA + plasmid being cut
+    svg = `<svg viewBox="0 0 600 180" style="width:100%;height:180px">
+      <text x="150" y="25" fill="#80c0a0" font-size="13" text-anchor="middle">目的の遺伝子</text>
+      <rect x="60" y="40" width="180" height="22" rx="4" fill="#3a9060" stroke="#fff" stroke-width="1.5"/>
+      <text x="150" y="56" fill="#fff" font-size="12" text-anchor="middle">インスリン遺伝子</text>
+      <text x="150" y="95" fill="#ff8080" font-size="22" text-anchor="middle">✂️ ✂️</text>
+      <text x="150" y="115" fill="#ffa0a0" font-size="11" text-anchor="middle">制限酵素で切る</text>
+      <text x="450" y="25" fill="#d0b060" font-size="13" text-anchor="middle">プラスミド（運び屋）</text>
+      <circle cx="450" cy="100" r="42" fill="none" stroke="#c89020" stroke-width="8"/>
+      <text x="450" y="160" fill="#ffa080" font-size="18" text-anchor="middle">✂️</text>
+    </svg>`;
+  }
+  if(cloneStep === 2){
+    // Ligation
+    svg = `<svg viewBox="0 0 600 180" style="width:100%;height:180px">
+      <text x="300" y="25" fill="#80c0a0" font-size="13" text-anchor="middle">DNAリガーゼでつなぐ</text>
+      <circle cx="300" cy="100" r="50" fill="none" stroke="#c89020" stroke-width="9"/>
+      <path d="M 270 56 A 50 50 0 0 1 330 56" fill="none" stroke="#3a9060" stroke-width="11"/>
+      <text x="300" y="45" fill="#5ad080" font-size="11" text-anchor="middle">遺伝子</text>
+      <text x="300" y="170" fill="#e0c080" font-size="11" text-anchor="middle">組換えプラスミド完成！</text>
+      <text x="230" y="105" fill="#fff" font-size="16">🔗</text>
+      <text x="355" y="105" fill="#fff" font-size="16">🔗</text>
+    </svg>`;
+  }
+  if(cloneStep === 3){
+    // Transformation into bacterium
+    svg = `<svg viewBox="0 0 600 180" style="width:100%;height:180px">
+      <text x="300" y="25" fill="#80c0a0" font-size="13" text-anchor="middle">大腸菌に取り込ませる（形質転換）</text>
+      <ellipse cx="300" cy="100" rx="90" ry="55" fill="#2a5040" stroke="#5ad080" stroke-width="2"/>
+      <circle cx="300" cy="100" r="30" fill="none" stroke="#c89020" stroke-width="6"/>
+      <path d="M 282 78 A 30 30 0 0 1 318 78" fill="none" stroke="#3a9060" stroke-width="7"/>
+      <text x="300" y="160" fill="#80c0a0" font-size="11" text-anchor="middle">🦠 大腸菌が遺伝子を持った</text>
+    </svg>`;
+  }
+  if(cloneStep === 4){
+    // Proliferation
+    let bacteria = '';
+    const positions = [[150,60],[250,50],[350,55],[450,65],[180,110],[290,120],[400,115],[230,90],[360,95],[300,75]];
+    positions.forEach(([x,y],i)=>{
+      bacteria += `<g style="opacity:0"><animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="${i*0.15}s" fill="freeze"/>
+        <ellipse cx="${x}" cy="${y}" rx="22" ry="13" fill="#2a5040" stroke="#5ad080" stroke-width="1.5"/>
+        <circle cx="${x}" cy="${y}" r="7" fill="none" stroke="#c89020" stroke-width="2.5"/></g>`;
+    });
+    svg = `<svg viewBox="0 0 600 180" style="width:100%;height:180px">
+      <text x="300" y="20" fill="#80c0a0" font-size="13" text-anchor="middle">培養すると…分裂してどんどん増える！</text>
+      ${bacteria}
+      <text x="300" y="172" fill="#5ad080" font-size="12" text-anchor="middle" font-weight="bold">🎉 一晩で数十億個に！遺伝子も同じ数だけ増えた</text>
+    </svg>`;
+  }
+  viz.innerHTML = svg;
+
+  const explain = document.getElementById('clone-explain');
+  explain.style.display = 'block';
+  explain.innerHTML = cloneExplains[cloneStep];
+}
+
+function cloneNextStep(){
+  if(cloneStep < 4){
+    cloneStep++;
+    renderCloneStep();
+  }
+  document.getElementById('clone-next-btn').textContent =
+    cloneStep >= 4 ? '✓ 完了！' : '▶ 次のステップ';
+  document.getElementById('clone-next-btn').disabled = cloneStep >= 4;
+}
+
+function resetClone(){
+  cloneStep = 0;
+  renderCloneStep();
+  document.getElementById('clone-next-btn').textContent = '▶ 次のステップ';
+  document.getElementById('clone-next-btn').disabled = false;
+  document.getElementById('clone-explain').style.display = 'none';
+}
+
+// ════════════════ INIT ════════════════
+window.addEventListener('DOMContentLoaded', ()=>{
+  renderPCRArena();
+  renderPCRChart();
+  renderEnzymeDNA();
+  renderCloneStep();
+});
+</script>
+</body>
+</html>
