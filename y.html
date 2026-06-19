@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>レプリソーム ─ DNA複製シミュレータ</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Roboto+Mono:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap');
+  :root{
+    --bg:#f4f8f7; --bg2:#ffffff; --panel:#ffffff; --panel-edge:#d9e6e3;
+    --ink:#16302b; --dim:#5c7873; --muted:#8aa39e;
+    --A:#10976e; --T:#c2820a; --G:#cf4368; --C:#2f74c0;
+    --A-bg:#e3f6ee; --T-bg:#fcf2dc; --G-bg:#fce4ea; --C-bg:#e4eefb;
+    --old:#9aaeb2; --old-bg:#eef2f3;
+    --gold:#e0a020; --bad:#d8443a;
+    --shadow:0 6px 20px rgba(20,60,50,.08);
+    --shadow-lg:0 12px 40px rgba(20,60,50,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(800px 500px at 82% -10%, rgba(16,151,110,.07), transparent 62%),
+      radial-gradient(640px 440px at 2% 108%, rgba(47,116,192,.06), transparent 60%),
+      var(--bg);
+    color:var(--ink); font-family:'Zen Kaku Gothic New',sans-serif; line-height:1.7;
+    -webkit-font-smoothing:antialiased; overflow-x:hidden;
+  }
+  .mono{font-family:'Roboto Mono',monospace}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 20px}
+  header{padding:46px 0 18px;text-align:center}
+  .kicker{font-family:'Roboto Mono',monospace;letter-spacing:.34em;font-size:.7rem;color:var(--A);
+    border:1px solid rgba(16,151,110,.3);border-radius:999px;padding:6px 16px;display:inline-block;margin-bottom:18px;background:var(--A-bg)}
+  h1{font-family:'Outfit',sans-serif;font-weight:800;font-size:clamp(2rem,6vw,3.4rem);letter-spacing:-.02em;line-height:1.05;color:var(--ink)}
+  h1 .sub{display:block;font-family:'Zen Kaku Gothic New',sans-serif;font-weight:700;font-size:clamp(1rem,2.6vw,1.3rem);color:var(--dim);margin-top:10px;letter-spacing:0}
+  .quest{max-width:600px;margin:18px auto 0;color:var(--dim);font-size:1rem}
+  .quest b{color:var(--ink)}
+  .modes{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin:28px 0 6px}
+  .mode{background:var(--panel);border:1px solid var(--panel-edge);border-radius:16px;
+    padding:18px 22px;min-width:230px;cursor:pointer;text-align:left;transition:.2s;position:relative;box-shadow:var(--shadow)}
+  .mode:hover{border-color:var(--A);transform:translateY(-3px);box-shadow:var(--shadow-lg)}
+  .mode.sel{border-color:var(--A);box-shadow:0 0 0 2px rgba(16,151,110,.22),var(--shadow)}
+  .mode .mt{font-family:'Outfit',sans-serif;font-weight:700;font-size:1.08rem;display:flex;align-items:center;gap:8px;color:var(--ink)}
+  .mode .md{font-size:.84rem;color:var(--dim);margin-top:5px}
+  .mode .badge{font-family:'Roboto Mono',monospace;font-size:.62rem;letter-spacing:.1em;padding:3px 9px;border-radius:7px;position:absolute;top:16px;right:16px}
+  .mode.basic .badge{background:var(--A-bg);color:var(--A)}
+  .mode.expert .badge{background:var(--G-bg);color:var(--G)}
+  .game{display:none;margin-top:18px}
+  .game.live{display:block}
+  .hud{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;margin-bottom:16px;
+    font-family:'Roboto Mono',monospace;font-size:.82rem;color:var(--dim)}
+  .hud .stat{background:var(--panel);border:1px solid var(--panel-edge);border-radius:11px;padding:8px 15px;box-shadow:var(--shadow)}
+  .hud .stat b{color:var(--ink);font-size:1rem}
+  .hud .stat .ok{color:var(--A)} .hud .stat .ng{color:var(--bad)}
+  .fork{position:relative;background:var(--bg2);
+    border:1px solid var(--panel-edge);border-radius:20px;padding:26px 20px 20px;overflow:hidden;box-shadow:var(--shadow-lg)}
+  .fork::before{content:"";position:absolute;inset:0 0 auto 0;height:4px;
+    background:linear-gradient(90deg,var(--A),var(--C),var(--G),var(--T));opacity:.85}
+  .forklabel{position:absolute;top:14px;left:20px;font-family:'Roboto Mono',monospace;font-size:.66rem;color:var(--muted);letter-spacing:.14em}
+  .forklabel.r{left:auto;right:20px}
+  .strandwrap{margin:32px 0 8px}
+  .strandlabel{font-family:'Roboto Mono',monospace;font-size:.74rem;color:var(--dim);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+  .strand{display:flex;gap:5px;align-items:center;min-height:52px;flex-wrap:wrap}
+  .nt{width:44px;height:48px;border-radius:11px;display:grid;place-items:center;flex-shrink:0;position:relative;
+    font-family:'Roboto Mono',monospace;font-weight:600;font-size:1.45rem;border:1px solid transparent;
+    transition:transform .18s, opacity .18s;box-shadow:0 2px 6px rgba(20,60,50,.06)}
+  .nt.A{background:var(--A-bg);color:var(--A);border-color:rgba(16,151,110,.3)}
+  .nt.T{background:var(--T-bg);color:var(--T);border-color:rgba(194,130,10,.3)}
+  .nt.G{background:var(--G-bg);color:var(--G);border-color:rgba(207,67,104,.3)}
+  .nt.C{background:var(--C-bg);color:var(--C);border-color:rgba(47,116,192,.3)}
+  .nt.old{background:var(--old-bg);color:var(--old);border:1px dashed var(--old);box-shadow:none}
+  .nt.empty{background:#f5f9f8;border:1px dashed var(--panel-edge);color:transparent;box-shadow:none}
+  .nt.target{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold), 0 0 16px rgba(224,160,32,.35);animation:pulse 1.1s infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 2px var(--gold),0 0 12px rgba(224,160,32,.25)}50%{box-shadow:0 0 0 2px var(--gold),0 0 20px rgba(224,160,32,.5)}}
+  .nt.placed{animation:snap .25s ease}
+  @keyframes snap{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.12)}100%{transform:scale(1)}}
+  .pairbar{height:11px;display:flex;gap:5px;margin:3px 0}
+  .pairbar i{width:44px;height:100%;display:block;flex-shrink:0}
+  .pairbar i.on{background:repeating-linear-gradient(90deg,var(--muted) 0 3px,transparent 3px 6px)}
+  .tray{margin-top:24px;text-align:center}
+  .prompt{font-size:.95rem;color:var(--dim);margin-bottom:14px}
+  .prompt b{color:var(--gold)}
+  .choices{display:flex;gap:13px;justify-content:center;flex-wrap:wrap}
+  .choice{width:66px;height:66px;border-radius:14px;border:1px solid transparent;
+    font-family:'Roboto Mono',monospace;font-weight:600;font-size:1.7rem;cursor:pointer;
+    display:grid;place-items:center;transition:.15s;position:relative;box-shadow:var(--shadow)}
+  .choice small{position:absolute;bottom:5px;font-size:.46rem;letter-spacing:.04em;opacity:.85;font-weight:400}
+  .choice.A{background:var(--A-bg);color:var(--A);border-color:rgba(16,151,110,.35)}
+  .choice.T{background:var(--T-bg);color:var(--T);border-color:rgba(194,130,10,.35)}
+  .choice.G{background:var(--G-bg);color:var(--G);border-color:rgba(207,67,104,.35)}
+  .choice.C{background:var(--C-bg);color:var(--C);border-color:rgba(47,116,192,.35)}
+  .choice:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);filter:brightness(1.02)}
+  .choice:active{transform:scale(.94)}
+  .choice.flash-ok{animation:fok .4s}
+  .choice.flash-ng{animation:fng .4s}
+  @keyframes fok{0%,100%{box-shadow:var(--shadow)}50%{box-shadow:0 0 0 3px var(--A),0 0 20px rgba(16,151,110,.5)}}
+  @keyframes fng{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+  .fb{min-height:1.5em;margin-top:16px;font-family:'Roboto Mono',monospace;font-size:.88rem}
+  .fb.ok{color:var(--A)} .fb.ng{color:var(--bad)} .fb.info{color:var(--dim)}
+  .dirflag{display:none;margin-top:10px;font-family:'Roboto Mono',monospace;font-size:.78rem;color:var(--G);background:var(--G-bg);border-radius:8px;padding:6px 12px}
+  .dirflag.on{display:inline-block}
+  .win{display:none;margin-top:22px;border:1px solid rgba(16,151,110,.35);border-radius:18px;
+    background:var(--bg2);padding:28px 26px;text-align:center;box-shadow:var(--shadow-lg)}
+  .win::before{content:"";display:block;width:48px;height:4px;border-radius:2px;background:var(--A);margin:0 auto 16px}
+  .win.show{display:block;animation:rise .5s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  .win h2{font-family:'Outfit',sans-serif;font-size:1.6rem;margin-bottom:6px;color:var(--ink)}
+  .win .lead{color:var(--dim);max-width:560px;margin:0 auto 14px}
+  .win .insight{background:var(--bg);border:1px solid var(--panel-edge);border-radius:13px;padding:16px 18px;text-align:left;margin:14px auto 0;max-width:620px}
+  .win .insight .it{font-family:'Roboto Mono',monospace;font-size:.72rem;color:var(--gold);letter-spacing:.1em;margin-bottom:6px}
+  .win .insight b{color:var(--ink)}
+  .btn{font-family:'Outfit',sans-serif;font-weight:700;border:none;border-radius:11px;padding:12px 26px;cursor:pointer;font-size:.95rem;transition:.18s}
+  .btn.primary{background:var(--A);color:#fff;box-shadow:0 4px 14px rgba(16,151,110,.3)}
+  .btn.primary:hover{filter:brightness(1.06);transform:translateY(-1px)}
+  .btn.ghost{background:transparent;border:1px solid var(--panel-edge);color:var(--dim);margin-left:8px}
+  .btn.ghost:hover{border-color:var(--A);color:var(--A)}
+  .controls{text-align:center;margin-top:18px}
+  .legend{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin:18px 0 0;font-size:.74rem;color:var(--dim)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:14px;height:14px;border-radius:4px;display:inline-block;border:1px solid rgba(0,0,0,.06)}
+  .footnote{text-align:center;color:var(--muted);font-size:.76rem;font-family:'Roboto Mono',monospace;padding:32px 0 50px}
+  @media (max-width:560px){
+    .nt{width:32px;height:38px;font-size:1.1rem}
+    .pairbar i{width:32px}
+    .choice{width:56px;height:56px;font-size:1.4rem}
+    .mode{min-width:0;width:100%}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="kicker">CELL NUCLEUS // S PHASE</span>
+    <h1>レプリソーム<span class="sub">きみの手で、DNAを複製せよ</span></h1>
+    <p class="quest">問い：<b>DNAはどのように合成されるのだろうか？</b><br>ほどけた1本の鎖（鋳型）を読み取り、相補性のルールで新しい鎖をつなげていこう。</p>
+    <div class="modes" id="modes">
+      <button class="mode basic sel" data-mode="basic">
+        <span class="badge mono">BASIC</span>
+        <span class="mt">🧬 初級：複製の基本</span>
+        <span class="md">鋳型に合う相方を選んで鎖を伸ばす。じっくり考えてOK。</span>
+      </button>
+      <button class="mode expert" data-mode="expert">
+        <span class="badge mono">EXPERT</span>
+        <span class="mt">⚡ 上級：複製フォーク</span>
+        <span class="md">逆向き合成・古い鎖は半分残る・制限時間あり。</span>
+      </button>
+    </div>
+    <p class="quest mono" style="font-size:.74rem;margin-top:12px" id="modehint">BASIC：相補性 A=T / G=C だけ覚えていれば解ける。</p>
+  </header>
+  <section class="game" id="game">
+    <div class="hud">
+      <div class="stat">進捗 <b><span id="prog">0</span>/<span id="total">0</span></b></div>
+      <div class="stat">正しくつないだ <b class="ok" id="hits">0</b></div>
+      <div class="stat">ミス <b class="ng" id="miss">0</b></div>
+      <div class="stat" id="timerStat" style="display:none">残り <b id="time">--</b>s</div>
+    </div>
+    <div class="fork">
+      <span class="forklabel mono">5'── 鋳型鎖（template）──3'</span>
+      <span class="forklabel r mono" id="forkR">新生鎖 →</span>
+      <div class="strandwrap">
+        <div class="strandlabel mono">鋳型鎖（読み取る側・変えられない）</div>
+        <div class="strand" id="tmpl"></div>
+        <div class="pairbar" id="bonds"></div>
+        <div class="strandlabel mono">新生鎖（きみが作る側）</div>
+        <div class="strand" id="newst"></div>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--A)"></i>A</span>
+        <span><i style="background:var(--T)"></i>T</span>
+        <span><i style="background:var(--G)"></i>G</span>
+        <span><i style="background:var(--C)"></i>C</span>
+        <span id="oldlg" style="display:none"><i style="background:var(--old)"></i>古い鎖（元から有った）</span>
+      </div>
+    </div>
+    <div class="tray">
+      <p class="prompt" id="prompt">光っている位置の鋳型塩基に <b>ペアになる塩基</b> を選ぼう</p>
+      <div class="choices" id="choices"></div>
+      <p class="dirflag mono" id="dirflag"></p>
+      <p class="fb info" id="fb">A=T、G=C。鋳型の文字を見て、相方を選ぶ。</p>
+    </div>
+    <div class="win" id="win">
+      <h2 id="winTitle">複製完了！</h2>
+      <p class="lead" id="winLead"></p>
+      <div class="insight" id="winInsight"></div>
+      <div style="margin-top:18px">
+        <button class="btn primary" id="nextBtn">次のレベルへ</button>
+        <button class="btn ghost" id="againBtn">同じレベルをやり直す</button>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn ghost" id="backBtn">← モード選択にもどる</button>
+    </div>
+  </section>
+  <p class="footnote">レプリソーム / 生物基礎 13「DNAの複製」 ─ 教室用シミュレータ</p>
+</div>
+<script>
+(function(){
+  const COMP = {A:'T', T:'A', G:'C', C:'G'};
+  const BASES = ['A','T','G','C'];
+  const el = (id) => document.getElementById(id);
+  let state = null, timer = null;
+  const LEVELS = {
+    basic: [
+      { tmpl:'ATGC', label:'まずは4文字。鋳型を読んで相方を置こう。' },
+      { tmpl:'TACGGA', label:'少し長く。落ち着いて1つずつ。' },
+      { tmpl:'GCTAGCAT', label:'仕上げ。鋳型→相補鎖をすべて完成させよう。' },
+    ],
+    expert: [
+      { tmpl:'ATGCATGC', label:'高速モード：制限時間内に相補鎖を完成させろ。', time:24, dir:'right' },
+      { tmpl:'CGTAGCTAG', label:'逆向き合成：今回は右から左へ向かって作る。', time:24, dir:'left' },
+      { tmpl:'ATGCGCTAAT', half:true, label:'半保存的複製：灰色は古い鎖。新しく作るのは色付きの位置だけ。', time:30, dir:'right' },
+    ]
+  };
+  function clearTimer(){ if(timer){ clearInterval(timer); timer=null; } }
+  function startLevel(mode, idx){
+    clearTimer();
+    el('win').classList.remove('show');
+    const def = LEVELS[mode][idx];
+    const tmpl = def.tmpl.split('');
+    const n = tmpl.length;
+    const pre = {};
+    if(def.half){ tmpl.forEach((b,i)=>{ if(i%2===0){ pre[i]=COMP[b]; } }); }
+    const order = [];
+    for(let i=0;i<n;i++){ if(pre[i]===undefined) order.push(i); }
+    if(def.dir==='left') order.reverse();
+    state = { mode, idx, def, tmpl, n, pre, order, step:0,
+              filled:Object.assign({},pre), hits:0, miss:0, time:def.time||null, lastPlaced:-1 };
+    el('total').textContent = order.length;
+    el('prog').textContent = 0;
+    el('hits').textContent = 0;
+    el('miss').textContent = 0;
+    el('forkR').textContent = def.dir==='left' ? '<- 新生鎖' : '新生鎖 ->';
+    el('oldlg').style.display = def.half ? 'inline-flex' : 'none';
+    if(def.time){
+      el('timerStat').style.display='block';
+      el('time').textContent=def.time;
+      timer = setInterval(function(){
+        state.time--; el('time').textContent=state.time;
+        if(state.time<=0){ clearTimer(); timeUp(); }
+      },1000);
+    } else { el('timerStat').style.display='none'; }
+    el('dirflag').className = 'dirflag mono' + (def.dir==='left'?' on':'');
+    if(def.dir==='left') el('dirflag').textContent='[!] 逆向き：右端から左へ向かって合成する';
+    el('fb').textContent = def.label;
+    el('fb').className = 'fb info';
+    renderStrands();
+    renderChoices();
+    el('game').classList.add('live');
+    el('game').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  function currentTarget(){
+    if(state.step>=state.order.length) return -1;
+    return state.order[state.step];
+  }
+  function renderStrands(){
+    const t = el('tmpl'), nw = el('newst'), bonds = el('bonds');
+    t.innerHTML=''; nw.innerHTML=''; bonds.innerHTML='';
+    const tgt = currentTarget();
+    state.tmpl.forEach(function(b,i){
+      const c = document.createElement('div');
+      c.className = 'nt '+b; c.textContent=b;
+      t.appendChild(c);
+      const bar = document.createElement('i');
+      if(state.filled[i]!==undefined) bar.className='on';
+      bonds.appendChild(bar);
+      const nd = document.createElement('div');
+      if(state.filled[i]!==undefined){
+        const isOld = state.pre[i]!==undefined;
+        nd.className = 'nt '+(isOld?'old':state.filled[i])+(state.lastPlaced===i?' placed':'');
+        nd.textContent = state.filled[i];
+      } else if(i===tgt){
+        nd.className = 'nt empty target'; nd.textContent='?';
+      } else {
+        nd.className = 'nt empty'; nd.textContent='';
+      }
+      nw.appendChild(nd);
+    });
+  }
+  function renderChoices(){
+    const wrap = el('choices'); wrap.innerHTML='';
+    const names={A:'アデニン',T:'チミン',G:'グアニン',C:'シトシン'};
+    BASES.forEach(function(b){
+      const btn=document.createElement('button');
+      btn.className='choice '+b;
+      btn.innerHTML = b+'<small>'+names[b]+'</small>';
+      btn.addEventListener('click',function(){ place(b,btn); });
+      wrap.appendChild(btn);
+    });
+  }
+  function place(base, btn){
+    const tgt = currentTarget();
+    if(tgt<0) return;
+    const need = COMP[state.tmpl[tgt]];
+    if(base===need){
+      state.filled[tgt]=base;
+      state.lastPlaced=tgt;
+      state.hits++; state.step++;
+      el('hits').textContent=state.hits;
+      el('prog').textContent=state.step;
+      btn.classList.add('flash-ok');
+      setTimeout(function(){ btn.classList.remove('flash-ok'); },400);
+      el('fb').textContent = 'OK  '+state.tmpl[tgt]+' の相方は '+base+'。正しくつながった。';
+      el('fb').className='fb ok';
+      renderStrands();
+      if(state.step>=state.order.length){ clearTimer(); win(); }
+    } else {
+      state.miss++; el('miss').textContent=state.miss;
+      btn.classList.add('flash-ng');
+      setTimeout(function(){ btn.classList.remove('flash-ng'); },400);
+      el('fb').textContent = 'NG  '+base+' は '+state.tmpl[tgt]+' とペアになれない。A=T / G=C を思い出そう。';
+      el('fb').className='fb ng';
+    }
+  }
+  function timeUp(){
+    el('fb').textContent='時間切れ！ もう一度挑戦しよう。';
+    el('fb').className='fb ng';
+    showWin(false);
+  }
+  function win(){ showWin(true); }
+  function showWin(success){
+    const w = el('win');
+    const def = state.def;
+    const list = LEVELS[state.mode];
+    const isLast = state.idx >= list.length-1;
+    let title, lead, insight;
+    if(!success){
+      title='もう一歩！';
+      lead='時間内に終わらなかった。鋳型の文字を見て、反射的に相方を選べるようになると速くなる。';
+      insight='<div class="it mono">HINT</div>A=T、G=C のペアは固定。迷いを減らせばスピードが上がる。';
+      el('nextBtn').style.display='none';
+    } else {
+      el('nextBtn').style.display='inline-block';
+      if(state.mode==='basic'){
+        title='複製、成功！';
+        lead='鋳型鎖を読み取り、相補性のルールで新しい鎖を1つずつつないで完成させた。これがDNA合成の基本だ。';
+        insight='<div class="it mono">わかったこと</div>新しい鎖は <b>鋳型の相方（A=T, G=C）</b> として決まる。だから元と同じ情報が、正確にコピーされる。';
+        if(state.idx===0){ lead='最初の複製ができた！ 鋳型の文字に対して相方を置くだけで、新しい鎖が決まっていく。'; }
+      } else {
+        title='複製フォーク、突破！';
+        if(def.dir==='left'){
+          lead='今回は逆向きに合成した。実際の細胞でも2本の鎖は向きが逆なので、片方はこのように切れぎれに作られる。';
+          insight='<div class="it mono">奥の発見</div>2本の鎖は逆向き。片方（リーディング鎖）は連続して、もう片方（ラギング鎖）は <b>短い断片＝岡崎フラグメント</b> としてつくられ、あとでつながれる。';
+        } else if(def.half){
+          lead='灰色の古い鎖を残したまま、すきまに新しい鎖を入れて完成させた。これが半保存的複製だ。';
+          insight='<div class="it mono">奥の発見</div>できた2本のDNAは、それぞれ <b>古い鎖1本＋新しい鎖1本</b>。元の鎖が半分ずつ受け継がれる ── これを半保存的複製という。';
+        } else {
+          lead='制限時間内に相補鎖を完成させた。細胞の中では、これがすごい速さで正確に進んでいる。';
+          insight='<div class="it mono">奥の発見</div>相補性のルールがあるから、速くても <b>間違えずにコピー</b> できる。鋳型さえあれば答えは一通りに決まる。';
+        }
+      }
+    }
+    if(isLast && success){
+      el('nextBtn').textContent = state.mode==='basic' ? '上級モードに挑戦' : 'モード選択へ';
+    } else {
+      el('nextBtn').textContent = '次のレベルへ';
+    }
+    el('winTitle').textContent=title;
+    el('winLead').textContent=lead;
+    el('winInsight').innerHTML=insight;
+    w.classList.add('show');
+    w.scrollIntoView({behavior:'smooth',block:'center'});
+  }
+  el('nextBtn').addEventListener('click',function(){
+    const list = LEVELS[state.mode];
+    if(state.idx < list.length-1){ startLevel(state.mode, state.idx+1); }
+    else if(state.mode==='basic'){ selectMode('expert'); startLevel('expert',0); }
+    else { backToMenu(); }
+  });
+  el('againBtn').addEventListener('click',function(){ startLevel(state.mode, state.idx); });
+  el('backBtn').addEventListener('click', backToMenu);
+  function backToMenu(){
+    clearTimer();
+    el('game').classList.remove('live');
+    el('win').classList.remove('show');
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  const hints = {
+    basic:'BASIC：相補性 A=T / G=C だけ覚えていれば解ける。',
+    expert:'EXPERT：逆向き合成・半保存的複製・制限時間。基礎が終わった人の裏ゴール。'
+  };
+  function selectMode(m){
+    const all=document.querySelectorAll('.mode');
+    all.forEach(function(x){ x.classList.toggle('sel', x.dataset.mode===m); });
+    el('modehint').textContent = hints[m];
+    if(!state) state={}; state.mode=m;
+  }
+  document.querySelectorAll('.mode').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      const m=btn.dataset.mode;
+      selectMode(m);
+      startLevel(m,0);
+    });
+  });
+  document.addEventListener('keydown',function(e){
+    if(!el('game').classList.contains('live')) return;
+    const k=e.key.toUpperCase();
+    if(BASES.indexOf(k)>=0){
+      const list=document.querySelectorAll('.choice');
+      let btn=null;
+      list.forEach(function(c){ if(c.classList.contains(k)) btn=c; });
+      if(btn) place(k,btn);
+    }
+  });
+})();
+</script>
+</body>
+</html>
