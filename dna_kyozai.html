@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DNAの分離と解読 ― 操作で学ぶ電気泳動・サンガー法・次世代シーケンサー</title>
+<style>
+  :root{
+    --ink:#16302b;
+    --paper:#ffffff;
+    --line:#d8e0db;
+    --accent:#1f7a5c;      /* gel green */
+    --accent-soft:#e8f3ee;
+    --warn:#c0492b;
+    --A:#3a8d4a; --T:#d24f4f; --G:#3a6fb0; --C:#e0a52e;
+    --band:#143028;
+    --shadow:0 1px 3px rgba(20,48,40,.08),0 8px 24px rgba(20,48,40,.06);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,system-ui,sans-serif;
+    line-height:1.7;-webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:0 20px 80px}
+  header.top{
+    border-bottom:2px solid var(--ink);padding:34px 0 22px;margin-bottom:8px;
+  }
+  .eyebrow{font-size:.78rem;letter-spacing:.18em;color:var(--accent);font-weight:700;margin:0 0 8px}
+  h1{font-size:1.9rem;line-height:1.3;margin:0 0 10px;letter-spacing:.01em}
+  .lead{font-size:1rem;color:#46554f;margin:0;max-width:680px}
+  .quest{
+    background:var(--accent-soft);border-left:4px solid var(--accent);
+    padding:12px 16px;border-radius:0 8px 8px 0;margin:18px 0 0;font-weight:600;
+  }
+
+  /* tabs */
+  nav.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:28px 0 22px;position:sticky;top:0;
+    background:var(--paper);padding:10px 0;z-index:20;border-bottom:1px solid var(--line)}
+  .tab{
+    border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 16px;
+    font-size:.9rem;cursor:pointer;color:#46554f;font-weight:600;transition:.15s;white-space:nowrap;
+  }
+  .tab:hover{border-color:var(--accent)}
+  .tab.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+  section.panel{display:none;animation:fade .3s ease}
+  section.panel.show{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  h2{font-size:1.35rem;margin:6px 0 4px;display:flex;align-items:baseline;gap:10px}
+  h2 .num{font-size:.85rem;color:#fff;background:var(--accent);border-radius:6px;padding:2px 9px;font-weight:700}
+  h3{font-size:1.05rem;margin:26px 0 8px;color:var(--ink)}
+  p.note{color:#5a6b64;font-size:.95rem}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px;margin:16px 0;box-shadow:var(--shadow)}
+  .steps{counter-reset:s;list-style:none;padding:0;margin:0}
+  .steps li{position:relative;padding:8px 0 8px 40px;border-bottom:1px dashed var(--line)}
+  .steps li:last-child{border-bottom:0}
+  .steps li::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:8px;
+    width:26px;height:26px;background:var(--accent-soft);color:var(--accent);border-radius:50%;
+    display:grid;place-items:center;font-weight:700;font-size:.85rem}
+
+  button.act{
+    background:var(--accent);color:#fff;border:0;border-radius:9px;padding:11px 20px;
+    font-size:.95rem;font-weight:700;cursor:pointer;transition:.15s;font-family:inherit;
+  }
+  button.act:hover{filter:brightness(1.07)}
+  button.act:disabled{background:#b7c4be;cursor:not-allowed}
+  button.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  button.ghost:hover{border-color:var(--accent);color:var(--accent)}
+  .btnrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+
+  /* ---------- electrophoresis ---------- */
+  .gelwrap{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start}
+  .gel{position:relative;background:linear-gradient(180deg,#1b3b32,#16302b);border-radius:10px;
+    width:330px;height:410px;flex:0 0 auto;overflow:hidden;border:3px solid #0e211c}
+  .pole{position:absolute;left:0;right:0;text-align:center;font-size:.72rem;color:#bfe6d6;
+    font-weight:700;letter-spacing:.08em;padding:4px 3px}
+  .pole.neg{top:0;background:rgba(60,90,80,.55)}
+  .pole.pos{bottom:0;background:rgba(192,73,43,.6)}
+  .lanes{position:absolute;top:54px;bottom:26px;left:10px;right:10px;display:flex;gap:8px}
+  .lane{flex:1;position:relative;border-left:1px dashed rgba(255,255,255,.08);border-right:1px dashed rgba(255,255,255,.08)}
+  .lane .well{position:absolute;top:0;left:8%;right:8%;height:10px;background:#0c1d18;border-radius:2px;border:1px solid rgba(255,255,255,.15)}
+  .lane .lbl{position:absolute;top:-22px;left:0;right:0;text-align:center;font-size:.72rem;color:#bfe6d6;font-weight:700}
+  .band{position:absolute;left:8%;right:8%;height:7px;border-radius:3px;top:2px;
+    background:#7ef0c0;box-shadow:0 0 8px rgba(126,240,192,.8);transition:top 2.4s cubic-bezier(.5,0,.3,1);opacity:.95}
+  .band.marker{background:#ffd27a;box-shadow:0 0 7px rgba(255,210,122,.7)}
+  .controls{flex:1;min-width:240px}
+  .voltbox{display:flex;align-items:center;gap:12px;margin:10px 0}
+  input[type=range]{flex:1;accent-color:var(--accent)}
+  .legend{font-size:.85rem;color:#5a6b64;margin-top:10px}
+  .sizetag{display:inline-block;font-size:.72rem;background:var(--accent-soft);color:var(--accent);
+    border-radius:5px;padding:1px 7px;margin-left:6px;font-weight:700}
+
+  /* ---------- sanger ---------- */
+  .seqstrip{display:flex;gap:4px;flex-wrap:wrap;font-family:"SF Mono",Consolas,monospace;font-size:1rem;margin:6px 0}
+  .nt{width:30px;height:34px;display:grid;place-items:center;border-radius:6px;font-weight:700;color:#fff}
+  .nt.A{background:var(--A)} .nt.T{background:var(--T)} .nt.G{background:var(--G)} .nt.C{background:var(--C)}
+  .nt.dim{opacity:.22}
+  .pal{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+  .chip{border:1px solid var(--line);border-radius:8px;padding:6px 14px;cursor:pointer;font-weight:700;
+    display:flex;align-items:center;gap:7px;background:#fff;font-size:.95rem;user-select:none}
+  .chip:hover{border-color:var(--accent)}
+  .dot{width:13px;height:13px;border-radius:3px;display:inline-block}
+  .laddervis{background:linear-gradient(180deg,#1b3b32,#16302b);border-radius:10px;padding:14px 10px;
+    border:3px solid #0e211c;min-height:260px;position:relative;margin-top:10px}
+  .lrow{display:flex;align-items:center;gap:10px;margin:5px 0}
+  .lrow .frag{flex:1;height:14px;border-radius:4px;background:#7ef0c0;box-shadow:0 0 6px rgba(126,240,192,.6);position:relative}
+  .lrow .frag span{position:absolute;right:6px;top:-3px;font-size:.7rem;color:#0e211c;font-weight:700}
+  .lrow .term{width:42px;text-align:center;font-weight:700;color:#fff;border-radius:5px;font-size:.85rem;padding:2px 0}
+  .readout{font-family:monospace;font-size:1.4rem;letter-spacing:.25em;color:var(--accent);font-weight:700;margin-top:8px}
+
+  /* ---------- NGS ---------- */
+  .genome{font-family:monospace;font-size:.95rem;background:var(--accent-soft);border-radius:8px;padding:10px;
+    word-break:break-all;line-height:2;border:1px solid var(--line)}
+  .read{display:inline-block;font-family:monospace;background:#fff;border:1px solid var(--accent);
+    color:var(--ink);border-radius:5px;padding:1px 6px;margin:3px;font-size:.85rem;box-shadow:var(--shadow)}
+  .assembled{font-family:monospace;font-size:1rem;letter-spacing:.08em;background:#16302b;color:#7ef0c0;
+    padding:12px;border-radius:8px;word-break:break-all;line-height:1.9}
+  .cmp{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:640px){.cmp{grid-template-columns:1fr}}
+  .cmp .col{border:1px solid var(--line);border-radius:12px;padding:16px}
+  .cmp h4{margin:0 0 10px;font-size:1rem;color:var(--accent)}
+  .cmp ul{margin:0;padding-left:18px;font-size:.92rem;color:#46554f}
+
+  .feedback{margin-top:12px;padding:12px 16px;border-radius:10px;font-weight:600;font-size:.95rem;display:none}
+  .feedback.ok{background:#e7f5ec;color:#1f7a3c;display:block;border-left:4px solid #1f7a3c}
+  .feedback.ng{background:#fcebe7;color:var(--warn);display:block;border-left:4px solid var(--warn)}
+
+  details{border:1px solid var(--line);border-radius:10px;padding:0 16px;margin:12px 0;background:#fafcfb}
+  summary{cursor:pointer;font-weight:700;padding:14px 0;color:var(--accent)}
+  details[open] summary{border-bottom:1px solid var(--line);margin-bottom:10px}
+  .kw{background:var(--accent-soft);border-radius:4px;padding:1px 6px;font-weight:700;color:var(--accent)}
+  footer{border-top:1px solid var(--line);margin-top:50px;padding-top:20px;color:#7a8a83;font-size:.85rem}
+  .tag{display:inline-block;background:var(--ink);color:#fff;border-radius:6px;padding:2px 9px;font-size:.75rem;font-weight:700;margin-bottom:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <p class="eyebrow">第9章 バイオテクノロジー ／ 第2回</p>
+  <h1>DNAの分離と解読<br>操作で学ぶ 電気泳動・サンガー法・次世代シーケンサー</h1>
+  <p class="lead">高校生物の探究教材。実際にスイッチを動かし、塩基を選び、断片をつなげながら「DNAの断片はどうやって分けられ、配列が読まれるのか」を体験します。</p>
+  <p class="quest">今日の問い ―「DNAの断片はどのようにして分離・解読されるのか？」</p>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="tab active" data-p="p1">1. 電気泳動</button>
+  <button class="tab" data-p="p2">2. サンガー法</button>
+  <button class="tab" data-p="p3">3. 次世代シーケンサー</button>
+  <button class="tab" data-p="p4">4. 比較とまとめ</button>
+</nav>
+
+<!-- ====================== PANEL 1 : 電気泳動 ====================== -->
+<section class="panel show" id="p1">
+  <h2><span class="num">STEP 1</span> アガロースゲル電気泳動</h2>
+  <p class="note">大きさの違うDNA断片を「網目」を通してふるい分ける操作です。電圧をかけて、自分で泳動を観察しましょう。</p>
+
+  <div class="card">
+    <h3>操作の手順</h3>
+    <ol class="steps">
+      <li>ゲル（寒天に似た<span class="kw">アガロース</span>）に、DNA断片の入った試料をのせる（ウェル）。</li>
+      <li>DNAはリン酸をもち全体が<strong>マイナスの電気</strong>を帯びるので、<strong>＋極（陽極）側</strong>へ引かれて動く。</li>
+      <li>断片が小さいほど網目をすり抜けやすく、<strong>遠くまで</strong>移動する。</li>
+      <li>大きさのわかった<span class="kw">サイズマーカー（DNAラダー）</span>と並べて、断片のサイズを読み取る。</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <div class="gelwrap">
+      <div class="gel" id="gel">
+        <div class="pole neg">― 陰極（マイナス）／ 試料はここから出発</div>
+        <div class="pole pos">＋ 陽極（プラス）　DNAはこちらへ →</div>
+        <div class="lanes" id="lanes"></div>
+      </div>
+      <div class="controls">
+        <h3 style="margin-top:0">電圧をかける</h3>
+        <div class="voltbox">
+          <span style="font-size:.85rem;color:#5a6b64">0V</span>
+          <input type="range" id="volt" min="0" max="100" value="0">
+          <span style="font-size:.85rem;color:#5a6b64">100V</span>
+        </div>
+        <p class="note" id="voltread">電圧：0V ― まだ流れていません</p>
+        <div class="btnrow">
+          <button class="act" id="run">泳動スタート ▶</button>
+          <button class="ghost act" id="resetGel">リセット</button>
+        </div>
+        <div class="legend">
+          <strong>レーンの中身</strong><br>
+          M＝マーカー（既知サイズ）<br>
+          X＝1000 bp ／ Y＝500 bp ／ Z＝200 bp<br>
+          <span class="note">※ bp = 塩基対数。今は隠れています。泳動後に距離から推測しよう。</span>
+        </div>
+      </div>
+    </div>
+    <button class="ghost act" id="revealSize" style="margin-top:14px" disabled>サイズを答え合わせする</button>
+    <div class="feedback" id="gelFb"></div>
+  </div>
+
+  <details>
+    <summary>探究 問① ― X・Y・Z を塩基対数の大きい順に並べると？</summary>
+    <p>移動距離が短い順に大きいDNAです。出発点に近い<strong>X</strong>が最大、最も遠くまで進んだ<strong>Z</strong>が最小。<br>
+    答え：<strong>X ＞ Y ＞ Z</strong>（X=1000 ＞ Y=500 ＞ Z=200 bp）</p>
+  </details>
+  <details>
+    <summary>探究 問② ― 小さいDNAほど遠くまで進む理由（「網目構造」を使って）</summary>
+    <p>アガロースゲルは細かい<span class="kw">網目構造</span>をしている。小さなDNA断片は網目のすき間を<strong>引っかからずにすり抜けられる</strong>ため速く進み、遠くまで移動する。大きな断片は網目に<strong>引っかかりやすく</strong>、移動が妨げられて出発点近くにとどまる。</p>
+  </details>
+</section>
+
+<!-- ====================== PANEL 2 : サンガー法 ====================== -->
+<section class="panel" id="p2">
+  <h2><span class="num">STEP 2</span> サンガー法（ジデオキシ法）</h2>
+  <p class="note">DNA合成を「わざと途中で止める」ことで配列を読む方法。鋳型に合う塩基を1つずつ選び、止まった断片を電気泳動で並べて配列を読みます。</p>
+
+  <div class="card">
+    <h3>なぜ合成が止まるのか</h3>
+    <p class="note">ふつうのヌクレオチド（dNTP）は3′末端に <span class="kw">OH基</span> をもち、そこに次の塩基が <span class="kw">ホスホジエステル結合</span> でつながる。ところが <span class="kw">ジデオキシヌクレオチド（ddNTP）</span> はこのOH基がない。だから ddNTP が入った瞬間、次がつなげず<strong>合成がストップ</strong>する。これを利用して長さの違う断片を大量に作る。</p>
+  </div>
+
+  <div class="card">
+    <h3>操作：鋳型に相補的な塩基を選んで合成しよう</h3>
+    <p class="note">鋳型鎖（template）に対し、A↔T・G↔C のペアになる塩基を左から順にクリックして合成鎖を伸ばします。</p>
+    <p style="font-size:.85rem;color:#5a6b64;margin-bottom:2px">鋳型鎖 3′→5′</p>
+    <div class="seqstrip" id="template"></div>
+    <p style="font-size:.85rem;color:#5a6b64;margin:10px 0 2px">あなたの合成鎖 5′→3′（クリックで追加）</p>
+    <div class="seqstrip" id="synth"><span class="note" style="color:#a7b3ad">ここに伸びていきます…</span></div>
+    <div class="pal">
+      <div class="chip" data-b="A"><span class="dot" style="background:var(--A)"></span>A を加える</div>
+      <div class="chip" data-b="T"><span class="dot" style="background:var(--T)"></span>T を加える</div>
+      <div class="chip" data-b="G"><span class="dot" style="background:var(--G)"></span>G を加える</div>
+      <div class="chip" data-b="C"><span class="dot" style="background:var(--C)"></span>C を加える</div>
+    </div>
+    <div class="btnrow">
+      <button class="ghost act" id="undoNt">1つ戻す</button>
+      <button class="ghost act" id="resetSynth">最初から</button>
+    </div>
+    <div class="feedback" id="synthFb"></div>
+  </div>
+
+  <div class="card">
+    <h3>止まった断片を並べて配列を読む（電気泳動）</h3>
+    <p class="note">ddNTPで止まった断片を短い順（下＝遠く）に並べると、止まった塩基を下から読むだけで配列がわかります。「合成を完成」させてから表示しよう。</p>
+    <button class="act" id="buildLadder" disabled>断片をゲルに並べる ▶</button>
+    <div class="laddervis" id="ladder"><p class="note" style="color:#9fb0a8;text-align:center;margin-top:90px">合成鎖を完成させると、ここに断片のはしごが現れます。</p></div>
+    <p class="note" style="margin-top:12px">下から上へ読んだ配列（＝合成鎖の配列）：</p>
+    <div class="readout" id="readout">―</div>
+  </div>
+
+  <details>
+    <summary>思考① ― ddNTPで合成が止まる理由（語句指定の解答例）</summary>
+    <p>通常のヌクレオチドは <span class="kw">3′末端</span> に <span class="kw">OH基</span> をもち、ここに次のヌクレオチドが <span class="kw">ホスホジエステル結合</span> で連結される。ddNTPはこのOH基をもたないため、ddNTPが取り込まれると次の結合ができず、DNA合成がそこで停止する。</p>
+  </details>
+</section>
+
+<!-- ====================== PANEL 3 : NGS ====================== -->
+<section class="panel" id="p3">
+  <h2><span class="num">STEP 3</span> 次世代シーケンサー（NGS）</h2>
+  <p class="note">長いDNAを大量の短い断片（リード）に分けて<strong>同時に</strong>読み、コンピュータで重なりをもとにつなぎ直す方法。膨大な配列を一気に解読します。</p>
+
+  <div class="card">
+    <h3>操作：短いリードをつなぎ合わせて元の配列を復元しよう</h3>
+    <p class="note">ある遺伝子の配列を、ばらばらの短いリードに分けました。重なる部分を手がかりに、正しい順番で並べてみましょう。クリックでリードを下に追加していきます。</p>
+
+    <p style="font-size:.85rem;color:#5a6b64;margin-bottom:2px">読み取られた短いリード（順不同）</p>
+    <div id="readPool"></div>
+
+    <p style="font-size:.85rem;color:#5a6b64;margin:14px 0 2px">あなたの組み立て（重なりでつなぐ）</p>
+    <div class="assembled" id="assembled">（ここにリードを追加 →）</div>
+    <div class="btnrow">
+      <button class="ghost act" id="undoRead">1つ戻す</button>
+      <button class="ghost act" id="resetReads">最初から</button>
+      <button class="act" id="checkAssembly">完成を確認</button>
+    </div>
+    <div class="feedback" id="ngsFb"></div>
+  </div>
+
+  <div class="card">
+    <h3>NGSの考え方</h3>
+    <ol class="steps">
+      <li>長いDNAを無数の短い断片に切り分ける。</li>
+      <li>すべての断片を<strong>並列で（同時に）</strong>大量に読む。</li>
+      <li>重なり合う部分（オーバーラップ）を計算機が照合してつなぎ、元の配列を復元する。</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ====================== PANEL 4 : 比較 ====================== -->
+<section class="panel" id="p4">
+  <h2><span class="num">STEP 4</span> 比較とまとめ</h2>
+  <p class="note">思考② に対応。サンガー法とNGSを「目的・規模・コスト」で整理します。</p>
+
+  <div class="cmp">
+    <div class="col">
+      <span class="tag">王道・少量精密</span>
+      <h4>サンガー法</h4>
+      <ul>
+        <li><strong>目的</strong>：特定の短い領域を正確に読む</li>
+        <li><strong>規模</strong>：1回で数百〜千塩基ほど（少数）</li>
+        <li><strong>コスト</strong>：1サンプルなら安価・手軽</li>
+        <li><strong>長所</strong>：精度が高く結果が読みやすい</li>
+        <li><strong>使う場面</strong>：1つの遺伝子の確認、変異チェック</li>
+      </ul>
+    </div>
+    <div class="col">
+      <span class="tag">大量並列</span>
+      <h4>次世代シーケンサー（NGS）</h4>
+      <ul>
+        <li><strong>目的</strong>：ゲノム全体など膨大な配列を一気に読む</li>
+        <li><strong>規模</strong>：数百万〜数十億の断片を同時に</li>
+        <li><strong>コスト</strong>：装置は高価だが、1塩基あたりは格安</li>
+        <li><strong>長所</strong>：圧倒的なスピードと情報量</li>
+        <li><strong>使う場面</strong>：全ゲノム解読、がん研究、生態調査</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>用語の整理（自分の言葉で書く前のヒント）</h3>
+    <ul style="color:#46554f">
+      <li><strong>アガロース電気泳動</strong>：ゲルの網目を使い、DNA断片を大きさで分離する操作。</li>
+      <li><strong>サイズマーカー（DNAラダー）</strong>：大きさが既知の断片の集まり。比較してサイズを推定する“ものさし”。</li>
+      <li><strong>ジデオキシヌクレオチド（ddNTP）</strong>：3′末端のOH基がなく、取り込まれると合成を止める特別な塩基。</li>
+      <li><strong>サンガー法</strong>：ddNTPで止めた断片を並べて配列を読む方法。</li>
+      <li><strong>次世代シーケンサー</strong>：多数の短い断片を同時に読み、重なりでつなぐ大量並列の解読装置。</li>
+    </ul>
+  </div>
+
+  <div class="card" style="background:var(--accent-soft);border-color:#bfe0d2">
+    <h3 style="margin-top:0">振り返り</h3>
+    <p style="color:#2c4a40;font-weight:600;margin:0">電気泳動とサンガー法・NGSは「目に見えないDNAの大きさや配列を、どうやって人間が読める形にするか」という問題を解決します。<br>気づきや新しい疑問は OPPA シートに書きましょう。</p>
+  </div>
+</section>
+
+<footer>
+  操作で学ぶDNA解読教材 ／ 第9章 バイオテクノロジー 第2回　― すべての操作はこのページ内で完結します。
+</footer>
+</div>
+
+<script>
+/* ---------- tabs ---------- */
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x=>x.classList.remove('show'));
+    t.classList.add('active');
+    document.getElementById(t.dataset.p).classList.add('show');
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
+});
+
+/* ====================================================================
+   1. ELECTROPHORESIS
+   ==================================================================== */
+const laneData=[
+  {id:'M',label:'M',marker:true,bands:[1000,700,500,300,200,100]},
+  {id:'X',label:'X',bp:1000},
+  {id:'Y',label:'Y',bp:500},
+  {id:'Z',label:'Z',bp:200},
+];
+const GEL_H=330;            // usable px for migration
+function bpToDist(bp){
+  // smaller bp -> larger distance. log scale, clamp
+  const d=(Math.log10(1200)-Math.log10(bp))/(Math.log10(1200)-Math.log10(90));
+  return Math.max(0.02,Math.min(0.97,d));
+}
+function buildGel(){
+  const lanes=document.getElementById('lanes');
+  lanes.innerHTML='';
+  laneData.forEach(L=>{
+    const lane=document.createElement('div');
+    lane.className='lane';
+    lane.innerHTML=`<div class="lbl">${L.label}</div><div class="well"></div>`;
+    if(L.marker){
+      L.bands.forEach(bp=>{
+        const b=document.createElement('div');
+        b.className='band marker';b.dataset.bp=bp;b.style.top='2px';
+        lane.appendChild(b);
+      });
+    }else{
+      const b=document.createElement('div');
+      b.className='band';b.dataset.bp=L.bp;b.style.top='2px';
+      lane.appendChild(b);
+    }
+    lanes.appendChild(lane);
+  });
+}
+buildGel();
+let hasRun=false;
+const volt=document.getElementById('volt');
+const voltread=document.getElementById('voltread');
+volt.addEventListener('input',()=>{
+  const v=volt.value;
+  voltread.textContent = v==0 ? '電圧：0V ― まだ流れていません'
+    : `電圧：${v}V ― 高いほど速く泳動します`;
+});
+document.getElementById('run').addEventListener('click',()=>{
+  if(volt.value==0){flash('gelFb','ng','まず電圧を上げてください（スライダーを動かす）。');return;}
+  const speed=volt.value/100;
+  document.querySelectorAll('#lanes .band').forEach(b=>{
+    const bp=+b.dataset.bp;
+    const frac=bpToDist(bp)*(0.55+0.45*speed); // voltage scales final distance a bit
+    b.style.top=(2+frac*GEL_H)+'px';
+  });
+  hasRun=true;
+  document.getElementById('revealSize').disabled=false;
+  flash('gelFb','ok','泳動中… 小さい断片ほど＋極へ速く進みます。止まったら「サイズを答え合わせ」へ。');
+});
+document.getElementById('resetGel').addEventListener('click',()=>{
+  buildGel();hasRun=false;volt.value=0;voltread.textContent='電圧：0V ― まだ流れていません';
+  document.getElementById('revealSize').disabled=true;
+  document.getElementById('gelFb').className='feedback';
+});
+document.getElementById('revealSize').addEventListener('click',()=>{
+  document.querySelectorAll('#lanes .lane').forEach(lane=>{
+    const lbl=lane.querySelector('.lbl');
+    const band=lane.querySelector('.band:not(.marker)');
+    if(band && !lbl.querySelector('.sizetag')){
+      const tag=document.createElement('span');tag.className='sizetag';tag.textContent=band.dataset.bp+'bp';
+      lbl.appendChild(tag);
+    }
+  });
+  flash('gelFb','ok','答え合わせ：X=1000bp（最大・近い）＞ Y=500bp ＞ Z=200bp（最小・遠い）。大きさの順が読めましたね。');
+});
+
+/* ====================================================================
+   2. SANGER
+   ==================================================================== */
+const templateSeq=['T','A','C','G','G','T','A','C']; // 3'->5'
+const comp={A:'T',T:'A',G:'C',C:'G'};
+const correctSynth=templateSeq.map(b=>comp[b]); // 5'->3' : A T G C C A T G
+function drawTemplate(){
+  const el=document.getElementById('template');el.innerHTML='';
+  templateSeq.forEach(b=>{
+    const d=document.createElement('div');d.className='nt '+b;d.textContent=b;el.appendChild(d);
+  });
+}
+drawTemplate();
+let synth=[];
+function drawSynth(){
+  const el=document.getElementById('synth');
+  if(synth.length===0){el.innerHTML='<span class="note" style="color:#a7b3ad">ここに伸びていきます…</span>';return;}
+  el.innerHTML='';
+  synth.forEach(b=>{const d=document.createElement('div');d.className='nt '+b;d.textContent=b;el.appendChild(d);});
+}
+document.querySelectorAll('.chip').forEach(c=>{
+  c.addEventListener('click',()=>{
+    if(synth.length>=templateSeq.length){flash('synthFb','ng','合成鎖はもう完成しています。');return;}
+    const picked=c.dataset.b;
+    const expected=correctSynth[synth.length];
+    synth.push(picked);drawSynth();
+    if(picked!==expected){
+      flash('synthFb','ng',`位置${synth.length}は鋳型「${templateSeq[synth.length-1]}」の相手なので「${expected}」が正解。A↔T・G↔Cを確認しよう。`);
+    }else if(synth.length===templateSeq.length){
+      const ok=synth.every((b,i)=>b===correctSynth[i]);
+      if(ok){flash('synthFb','ok','完璧！相補的な合成鎖ができました。次は断片を並べて読みます。');
+        document.getElementById('buildLadder').disabled=false;}
+      else{flash('synthFb','ng','長さは届きましたが、間違いがあります。「最初から」でやり直そう。');}
+    }else{
+      flash('synthFb','ok',`正解！ ${templateSeq[synth.length-1]} の相手は ${expected}。続けて伸ばそう。`);
+    }
+  });
+});
+document.getElementById('undoNt').addEventListener('click',()=>{synth.pop();drawSynth();
+  document.getElementById('buildLadder').disabled=true;});
+document.getElementById('resetSynth').addEventListener('click',()=>{synth=[];drawSynth();
+  document.getElementById('synthFb').className='feedback';
+  document.getElementById('buildLadder').disabled=true;
+  document.getElementById('ladder').innerHTML='<p class="note" style="color:#9fb0a8;text-align:center;margin-top:90px">合成鎖を完成させると、ここに断片のはしごが現れます。</p>';
+  document.getElementById('readout').textContent='―';
+});
+document.getElementById('buildLadder').addEventListener('click',()=>{
+  const seq=correctSynth; // read 5'->3'
+  const ladder=document.getElementById('ladder');ladder.innerHTML='';
+  // each fragment terminates at a ddNTP at position i; shortest at bottom (far)
+  // display top=longest ... bottom=shortest? we read bottom->up. Put shortest at bottom.
+  for(let i=seq.length-1;i>=0;i--){
+    const row=document.createElement('div');row.className='lrow';
+    const term=document.createElement('div');term.className='term '+seq[i];term.textContent='dd'+seq[i];
+    const frag=document.createElement('div');frag.className='frag';
+    frag.style.width=(30+ (i+1)/seq.length*60)+'%';
+    frag.innerHTML=`<span>${i+1}塩基</span>`;
+    row.appendChild(frag);row.appendChild(term);ladder.appendChild(row);
+  }
+  document.getElementById('readout').textContent=seq.join(' ');
+  flash('synthFb','ok','短い断片ほど遠く（下）。下から上へ読むと合成鎖の配列になります。');
+});
+
+/* ====================================================================
+   3. NGS
+   ==================================================================== */
+const genome="ATGCCATTGACGTACGGATCCAA";
+// overlapping reads (shuffled)
+const reads=[
+  {seq:"ATGCCATTGA", start:0},
+  {seq:"TTGACGTACG", start:6},
+  {seq:"GTACGGATCC", start:12},
+  {seq:"GGATCCAA",   start:15},
+];
+const shuffled=[reads[2],reads[0],reads[3],reads[1]];
+let assembly=[];
+function drawPool(){
+  const pool=document.getElementById('readPool');pool.innerHTML='';
+  shuffled.forEach((r,i)=>{
+    const s=document.createElement('span');s.className='read';s.textContent=r.seq;
+    s.style.cursor='pointer';s.dataset.i=i;
+    if(assembly.includes(i)){s.style.opacity=.3;s.style.pointerEvents='none';}
+    s.addEventListener('click',()=>{assembly.push(i);drawPool();drawAssembly();});
+    pool.appendChild(s);
+  });
+}
+function drawAssembly(){
+  const el=document.getElementById('assembled');
+  if(assembly.length===0){el.textContent='（ここにリードを追加 →）';return;}
+  el.innerHTML=assembly.map(i=>shuffled[i].seq).join('  →  ');
+}
+drawPool();
+document.getElementById('undoRead').addEventListener('click',()=>{assembly.pop();drawPool();drawAssembly();
+  document.getElementById('ngsFb').className='feedback';});
+document.getElementById('resetReads').addEventListener('click',()=>{assembly=[];drawPool();drawAssembly();
+  document.getElementById('ngsFb').className='feedback';});
+document.getElementById('checkAssembly').addEventListener('click',()=>{
+  if(assembly.length<shuffled.length){flash('ngsFb','ng','まだ全部のリードを並べていません。4つすべて使いましょう。');return;}
+  const order=assembly.map(i=>shuffled[i].start);
+  const sorted=[...order].every((v,idx,a)=>idx===0||a[idx-1]<v);
+  if(sorted){
+    document.getElementById('assembled').innerHTML=
+      '<span style="color:#fff">復元成功：</span> '+genome;
+    flash('ngsFb','ok','正解！重なり（オーバーラップ）が一致する順に並べると、元の配列 '+genome+' が復元できました。これを一度に何百万回も行うのがNGSです。');
+  }else{
+    flash('ngsFb','ng','並び順が違います。前のリードの「末尾」と次のリードの「先頭」が重なるように並べてみよう。');
+  }
+});
+
+/* ---------- shared ---------- */
+function flash(id,type,msg){
+  const el=document.getElementById(id);
+  el.className='feedback '+(type==='ok'?'ok':'ng');
+  el.textContent=msg;
+}
+</script>
+</body>
+</html>
