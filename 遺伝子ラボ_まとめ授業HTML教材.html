@@ -1,0 +1,995 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>遺伝子ラボ ｜ トリプレット・遺伝暗号表・ゲノム・分化</title>
+<style>
+:root{
+  --paper:#EAF0E2; --bar:#DCE6D0; --card:#F7FAF2;
+  --ink:#16323F; --ink2:#4E6873; --rule:#A8BCAB;
+  --stamp:#C2402B; --amber:#C98A16;
+  --display:"Hiragino Mincho ProN","Yu Mincho",YuMincho,"Noto Serif JP","MS PMincho",serif;
+  --body:"Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,"Noto Sans JP","Meiryo",sans-serif;
+  --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Courier New",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);
+  background-image:repeating-linear-gradient(180deg,transparent 0 27px,rgba(22,50,63,.045) 27px 28px);
+  color:var(--ink);font-family:var(--body);line-height:1.7;-webkit-text-size-adjust:100%}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px 72px}
+
+.lab-head{border-bottom:2px solid var(--ink);margin-bottom:16px;padding:16px 0 10px}
+.lab-head .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--ink2)}
+.lab-head h1{font-family:var(--display);font-size:clamp(24px,4.2vw,38px);margin:2px 0 6px;letter-spacing:.04em;font-weight:600}
+.lab-head h1 em{font-style:normal;color:var(--stamp)}
+.headrow{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:flex-end;justify-content:space-between}
+.meta{display:flex;gap:18px;flex-wrap:wrap;font-family:var(--mono);font-size:11.5px;color:var(--ink2)}
+.meta b{font-size:17px;color:var(--ink);font-weight:600}
+.teamin{font:inherit;font-family:var(--mono);font-size:13px;background:transparent;border:0;border-bottom:1px solid var(--rule);color:var(--ink);width:120px;padding:2px 4px}
+.teamin:focus{outline:2px solid var(--amber);outline-offset:2px}
+
+.steps{display:flex;flex-wrap:wrap;border:1px solid var(--rule);background:var(--card);margin-bottom:20px}
+.steps button{flex:1 1 130px;font:inherit;font-size:12.5px;padding:8px 6px;background:transparent;border:0;border-right:1px solid var(--rule);color:var(--ink2);cursor:pointer;text-align:center;line-height:1.35}
+.steps button:last-child{border-right:0}
+.steps button .n{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.14em}
+.steps button[data-state="on"]{background:var(--ink);color:#fff}
+.steps button[data-state="done"]{color:var(--ink)}
+.steps button[data-state="done"] .n::after{content:" ✓";color:var(--stamp)}
+.steps button[disabled]{opacity:.4;cursor:not-allowed}
+
+.cols{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:24px;align-items:start}
+@media (max-width:900px){.cols{grid-template-columns:1fr}}
+
+.card{background:var(--card);border:1px solid var(--rule);padding:20px 22px;margin-bottom:18px}
+.card>h2{font-family:var(--display);font-size:22px;margin:0 0 4px;font-weight:600;letter-spacing:.03em}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--stamp);margin:0 0 8px}
+.lead{margin:0 0 14px;font-size:14.5px}
+.note{border-left:3px solid var(--amber);background:rgba(201,138,22,.08);padding:9px 13px;font-size:13px;margin:14px 0}
+.hist{font-size:12.5px;color:var(--ink2);border-top:1px dotted var(--rule);margin-top:16px;padding-top:10px}
+.hist b{font-family:var(--mono);color:var(--stamp);font-weight:600}
+
+.btn{font:inherit;font-size:14px;background:var(--ink);color:#fff;border:0;padding:10px 22px;cursor:pointer;letter-spacing:.06em}
+.btn:hover{background:var(--stamp)}
+.btn:disabled{background:var(--rule);cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--ink)}
+.btn.ghost:hover{background:var(--ink);color:#fff}
+.btn.sm{font-size:12.5px;padding:6px 14px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center}
+
+.opts{display:grid;gap:8px;margin:12px 0}
+.opt{font:inherit;text-align:left;background:#fff;border:1px solid var(--rule);padding:11px 15px;cursor:pointer;font-size:14px}
+.opt:hover{border-color:var(--ink)}
+.opt[data-r="ok"]{border-color:var(--ink);border-width:2px;background:rgba(22,50,63,.06)}
+.opt[data-r="ng"]{border-color:var(--stamp);color:var(--stamp);text-decoration:line-through}
+.verdict{font-size:13.5px;margin-top:10px;padding:10px 14px;border:1px dashed var(--rule);background:#fff}
+.verdict.hide{display:none}
+
+.baserow{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 4px}
+.base{font-family:var(--mono);font-size:19px;width:52px;height:52px;border:1px solid var(--ink);background:#fff;cursor:pointer;color:var(--ink)}
+.base:hover{background:var(--ink);color:#fff}
+.base[aria-pressed="true"]{background:var(--ink);color:#fff}
+.base[data-used="1"]{opacity:.45}
+.tube{margin:14px 0;border:1px solid var(--rule);background:#fff;padding:14px 16px;min-height:88px}
+.tube .rna{font-family:var(--mono);font-size:15px;letter-spacing:.14em;word-break:break-all;color:var(--ink2)}
+.chain{display:flex;gap:5px;flex-wrap:wrap;margin-top:12px;align-items:center;min-height:32px}
+.aa{background:var(--stamp);color:#fff;font-size:11.5px;padding:5px 9px;border-radius:14px;white-space:nowrap;animation:pop .34s both}
+@keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+.shake{animation:sh .5s}
+@keyframes sh{10%,90%{transform:translateX(-1px)}30%,70%{transform:translateX(3px)}50%{transform:translateX(-3px)}}
+.fail{color:var(--stamp);font-size:13.5px;margin-top:10px}
+
+.slotrow{display:flex;gap:24px;flex-wrap:wrap;margin:6px 0 2px}
+.slot{text-align:center}
+.slot .lab{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;color:var(--ink2);display:block;margin-bottom:5px}
+.slot .bs{display:flex;gap:5px}
+.slot .base{width:42px;height:42px;font-size:16px}
+.readout{font-family:var(--mono);font-size:clamp(28px,6.5vw,42px);letter-spacing:.18em;margin:14px 0 4px;color:var(--ink)}
+.readout small{font-size:13px;letter-spacing:.1em;color:var(--ink2)}
+.predict{display:flex;gap:10px;align-items:center;flex-wrap:wrap;border:1px solid var(--ink);background:#fff;padding:9px 13px;margin:10px 0}
+.predict label{font-size:13px;font-weight:600}
+.predict select{font:inherit;font-size:13px;padding:5px 8px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);max-width:230px}
+.predict .tip{font-size:11.5px;color:var(--ink2)}
+.log{border:1px solid var(--rule);margin-top:14px;font-family:var(--mono);font-size:12.5px;max-height:170px;overflow:auto}
+.log div{padding:5px 12px;display:flex;justify-content:space-between;gap:10px}
+.log div:nth-child(odd){background:var(--bar)}
+.log .none{color:var(--stamp)}
+.log .hit{color:var(--amber);font-weight:600}
+.log .empty{color:var(--ink2);justify-content:center;font-style:italic}
+.gauge{display:flex;gap:18px;flex-wrap:wrap;font-family:var(--mono);font-size:12px;color:var(--ink2);margin-top:8px}
+.gauge b{color:var(--stamp);font-size:15px}
+.rival{border:1px dashed var(--stamp);padding:7px 12px;font-family:var(--mono);font-size:12px;color:var(--ink2);margin:10px 0}
+.rival b{color:var(--stamp);font-size:15px}
+
+.mrna{background:var(--ink);color:#fff;padding:12px 16px;font-family:var(--mono);font-size:clamp(14px,3.2vw,19px);letter-spacing:.16em;word-break:break-all;margin:12px 0}
+.mrna span{color:var(--amber);font-size:11px;letter-spacing:.08em}
+.cut{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.codonbox{border:1px solid var(--rule);background:#fff;padding:8px;text-align:center;min-width:100px;flex:1 1 100px}
+.codonbox .c{font-family:var(--mono);font-size:17px;letter-spacing:.12em}
+.codonbox select{font:inherit;font-size:11.5px;width:100%;margin-top:6px;padding:3px;border:1px solid var(--rule);background:var(--paper);color:var(--ink)}
+.codonbox[data-ok="1"]{border-color:var(--ink);border-width:2px;background:rgba(22,50,63,.05)}
+.codonbox[data-ok="0"]{border-color:var(--stamp)}
+.kana{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.kana b{font-family:var(--display);font-size:30px;width:50px;height:50px;line-height:50px;text-align:center;border:2px solid var(--stamp);color:var(--stamp);animation:pop .4s both}
+.kana b.mute{border-color:var(--rule);color:var(--rule)}
+.ansrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.ansrow input{font:inherit;font-family:var(--display);font-size:20px;padding:6px 12px;border:1px solid var(--ink);background:#fff;width:180px;color:var(--ink)}
+
+.facts{border:1px solid var(--ink);background:#fff;padding:9px 14px;font-size:13px;margin:12px 0;font-family:var(--mono)}
+.gq{border:1px solid var(--rule);margin:12px 0}
+.gq .row{display:flex;gap:12px;align-items:center;padding:9px 13px;flex-wrap:wrap}
+.gq .row:nth-child(odd){background:var(--bar)}
+.gq .q{flex:1 1 300px;font-size:13.5px}
+.gq .q b{font-family:var(--mono);color:var(--stamp);margin-right:6px}
+.gq input{font:inherit;font-family:var(--mono);font-size:15px;width:128px;padding:5px 8px;border:1px solid var(--ink);background:#fff;text-align:right;color:var(--ink)}
+.gq .u{font-size:12.5px;color:var(--ink2);width:52px}
+.gq .fb{flex:1 1 100%;font-size:12.5px;padding-top:2px}
+.gq .fb.ok{color:var(--ink)}
+.gq .fb.ng{color:var(--stamp)}
+
+.flow{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.flow button{font:inherit;font-size:13px;background:#fff;border:1px solid var(--ink);padding:12px 14px;cursor:pointer;color:var(--ink);flex:1 1 110px}
+.flow button:disabled{background:var(--ink);color:#fff;cursor:default;border-color:var(--ink)}
+.track{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-family:var(--mono);font-size:13px;min-height:34px;border:1px dashed var(--rule);padding:7px 10px;background:#fff}
+.track span{background:var(--ink);color:#fff;padding:4px 9px;font-size:12px}
+.track i{color:var(--rule);font-style:normal}
+
+.kart{overflow-x:auto;margin:12px 0}
+.kart table{border-collapse:collapse;width:100%;font-size:12.5px;min-width:520px}
+.kart th,.kart td{border:1px solid var(--rule);padding:5px 6px;text-align:center}
+.kart th{background:var(--ink);color:#fff;font-weight:600;font-size:12px}
+.kart td.n{text-align:left;background:var(--bar);white-space:nowrap;font-size:12px}
+.kart td.o{font-family:var(--mono);font-size:15px;color:var(--stamp)}
+.kart td.x{font-family:var(--mono);font-size:15px;color:var(--rule)}
+.kart select{font:inherit;font-size:11.5px;width:100%;padding:3px 2px;border:1px solid var(--rule);background:var(--paper);color:var(--ink)}
+.kart td[data-ok="1"]{background:rgba(22,50,63,.08);border-color:var(--ink)}
+.kart td[data-ok="0"]{border-color:var(--stamp)}
+
+.notebox{border:2px solid var(--ink);background:#fff;padding:11px 15px;margin:16px 0}
+.notebox .lb{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--stamp);display:block;margin-bottom:4px}
+.notebox p{font-size:15.5px;font-weight:600;margin:0;line-height:1.65}
+.sheet{border:2px solid var(--ink);background:#fff;padding:16px 18px;margin:14px 0}
+.sheet h3{font-family:var(--display);font-size:17px;margin:0 0 10px;font-weight:600}
+.sheet ol{margin:0;padding-left:22px}
+.sheet ol li{font-size:15px;font-weight:600;margin-bottom:7px}
+.sheet .one{border-top:1px solid var(--rule);margin-top:12px;padding-top:12px;font-size:17px;font-weight:700;font-family:var(--display)}
+.oppa{border:2px solid var(--stamp);background:#fff;padding:16px 18px;margin:14px 0}
+.oppa .lb{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;color:var(--stamp);display:block;margin-bottom:6px}
+.oppa .q{font-family:var(--display);font-size:20px;font-weight:700;margin:0 0 8px}
+.oppa p{font-size:13.5px;margin:0;color:var(--ink2)}
+
+.panel{position:sticky;top:14px;border:1px solid var(--ink);background:var(--card)}
+@media (max-width:900px){.panel{position:static}}
+.panel h3{margin:0;font-family:var(--display);font-size:15px;padding:10px 14px;background:var(--ink);color:#fff;display:flex;justify-content:space-between;align-items:baseline;font-weight:600}
+.panel h3 span{font-family:var(--mono);font-size:11px;color:var(--amber)}
+.tbl{padding:10px 12px 14px}
+.tbl table{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:9.5px;table-layout:fixed}
+.tbl th{color:var(--ink2);font-weight:600;font-size:10px;padding:2px}
+.tbl tr>*:first-child{width:18px}
+.tbl td{border:1px solid var(--rule);padding:0;vertical-align:top}
+.cellline{display:flex;gap:3px;align-items:center;padding:1px 3px;border-bottom:1px solid rgba(168,188,171,.4);height:17px;overflow:hidden}
+.cellline:last-child{border-bottom:0}
+.cellline i{font-style:normal;color:var(--rule);width:7px;flex:none}
+.cellline u{text-decoration:none;font-size:9px;font-family:var(--body);color:var(--rule);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cellline[data-f="1"]{background:rgba(194,64,43,.09);animation:stamp .45s both}
+.cellline[data-f="1"] u{color:var(--ink);font-weight:600}
+.cellline[data-f="1"] i{color:var(--stamp)}
+.cellline[data-f="2"] u{color:var(--ink2)}
+@keyframes stamp{from{transform:scale(1.7) rotate(-7deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+.panel .foot{padding:0 12px 12px;font-size:11px;color:var(--ink2);display:flex;justify-content:space-between;gap:8px;align-items:center}
+.panel .foot button{font:inherit;font-size:11px;background:transparent;border:1px solid var(--rule);padding:3px 8px;cursor:pointer;color:var(--ink2)}
+.panel .foot button:hover{border-color:var(--ink);color:var(--ink)}
+
+.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:10px;margin:14px 0}
+.sum div{border:1px solid var(--rule);background:#fff;padding:9px 11px}
+.sum b{display:block;font-family:var(--mono);font-size:22px;color:var(--stamp)}
+.sum span{font-size:11.5px;color:var(--ink2)}
+.howto{border:2px solid var(--ink);background:#fff;padding:10px 14px;margin:14px 0;font-size:14px}
+.howto b{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--stamp);margin-bottom:3px}
+.needs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.needs button{font:inherit;font-family:var(--mono);font-size:17px;letter-spacing:.1em;background:#fff;border:2px solid var(--ink);
+  padding:9px 14px 7px;cursor:pointer;color:var(--ink);min-width:104px;line-height:1.25}
+.needs button:hover{background:var(--ink);color:#fff}
+.needs button em{display:block;font-style:normal;font-family:var(--body);font-size:11px;letter-spacing:0;color:var(--ink2)}
+.needs button:hover em{color:#fff}
+.needs button[data-done="1"]{background:rgba(22,50,63,.07);border-color:var(--rule);cursor:default;color:var(--ink)}
+.needs button[data-done="1"] em{color:var(--stamp);font-weight:600}
+.needs button[data-done="1"]:hover{background:rgba(22,50,63,.07);color:var(--ink)}
+.freebox{border-top:1px dotted var(--rule);margin-top:16px;padding-top:12px}
+.freebox .cap{font-size:12.5px;color:var(--ink2);margin-bottom:6px}
+.hidden{display:none}
+@media print{body{background:#fff}.steps,.actions,.panel .foot button{display:none}.card{break-inside:avoid}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+<header class="lab-head">
+  <div class="headrow">
+    <div>
+      <div class="kicker">T R I P L E T ／ C O D E ／ G E N O M E ／ D I F F E R E N T I A T I O N</div>
+      <h1>遺伝子ラボ <em>単元のまとめ</em></h1>
+    </div>
+    <div class="meta">
+      <label>班名 <input class="teamin" id="team" placeholder="1班" autocomplete="off"></label>
+      <div>解読コドン<br><b id="mCount">0</b>/64</div>
+      <div>試薬<br><b id="mUse">0</b>本</div>
+      <div>予想的中<br><b id="mHit">0</b>回</div>
+      <div>経過<br><b id="mTime">0:00</b></div>
+    </div>
+  </div>
+</header>
+
+<nav class="steps" id="nav"></nav>
+
+<div class="cols">
+<main id="main">
+
+<!-- 0 -->
+<section class="card" data-step="0">
+  <p class="eyebrow">START ／ 単元のまとめ</p>
+  <h2>4種類の文字で、20種類を指定する</h2>
+  <p class="lead">遺伝子の学習は今日で最後。今日は<b>解読者になって</b>、これまで習ったことを自分の手で組み立て直す。
+  まず最初の問いから。mRNAの塩基は <b>A・U・G・C</b> の4種類。アミノ酸は <b>20種類</b>。いくつの塩基をひとまとまりにすれば足りるだろうか。</p>
+  <div class="opts" id="q0"></div>
+  <div class="verdict hide" id="q0v"></div>
+  <div class="actions"><button class="btn" id="go0" disabled>実験室へ</button></div>
+</section>
+
+<!-- 1 -->
+<section class="card hidden" data-step="1">
+  <p class="eyebrow">LAB 1 ／ 同じ塩基だけの人工mRNA</p>
+  <h2>まず、いちばん単純なものから</h2>
+  <p class="lead">大腸菌をすりつぶし、リボソーム・tRNA・酵素だけを残した液（<b>無細胞系</b>）に、人工的につくったmRNAを入れる。
+  塩基を1種類えらぶと、それだけが延々とつながったmRNAができる。4種類すべて試そう。</p>
+  <div class="baserow" id="homoBases"></div>
+  <div class="tube" id="homoTube"><div class="rna" style="color:var(--rule)">塩基をえらぶと反応管に人工mRNAが入る</div></div>
+  <div class="actions"><button class="btn" id="go1" disabled>次の実験へ</button></div>
+  <p class="hist"><b>1961年</b>／ニーレンバーグとマタイは poly-U から<b>フェニルアラニンだけ</b>のペプチドを得た。人類が最初に解読した遺伝暗号である。</p>
+</section>
+
+<!-- 2 -->
+<section class="card hidden" data-step="2">
+  <p class="eyebrow">LAB 2 ／ トリプレット結合実験</p>
+  <h2>3文字だけを、リボソームに渡す</h2>
+  <p class="lead">3塩基のRNA断片をリボソームに加えると、それに対応する<b>tRNAだけが結合して残る</b>。
+  運ばれてきたアミノ酸を調べれば、<b>3文字とアミノ酸が1対1で決まる</b>。1回の実験で1つのコドンが分かる、いちばん確実な方法だ。</p>
+
+  <div class="howto">
+    <b>Y O U R　T A S K</b>
+    ① 下のmRNAを3つずつ区切る　→　② 出てきたコドンを1つずつ調べる　→　③ 5種類そろったら次へ
+  </div>
+
+  <p style="font-size:13.5px;margin:0"><b>ステップ①</b>　このmRNAを、どこから3つずつ区切ればよいか。</p>
+  <div class="mrna" id="missionStrip"></div>
+  <div class="opts" id="qCut"></div>
+  <div class="verdict hide" id="qCutv"></div>
+
+  <div class="hidden" id="labWrap">
+    <p style="font-size:13.5px;margin:18px 0 0"><b>ステップ②</b>　出てきたコドンは次の5種類。<b>押すと実験装置にセットされる。</b></p>
+    <div class="needs" id="need"></div>
+
+    <div class="readout" id="triplet">— — —<br><small>上のボタンを押す</small></div>
+    <div class="predict">
+      <label for="pred">実験の前に予想する：</label>
+      <select id="pred"><option value="">— 予想を選ぶ（任意）—</option></select>
+      <span class="tip">当たると試薬が1本もどる</span>
+    </div>
+    <div class="actions" style="margin-top:6px">
+      <button class="btn" id="runTrip" disabled>リボソームに加える</button>
+      <button class="btn ghost sm" id="extra">予備の試薬を開封（+3本）</button>
+    </div>
+    <div class="gauge">残りの試薬 <b id="left">10</b> 本　／　予想的中 <b id="hitN">0</b> 回</div>
+    <div class="log" id="tripLog"><div class="empty">まだ試していない</div></div>
+    <div class="rival" id="rival">ライバル・オチョア研究室の解読数 <b id="rivalN">0</b> 個　<span class="tip">— 1961年、暗号解読は実際に競争だった</span></div>
+
+    <div class="freebox">
+      <div class="cap">自分で好きな3塩基を組み立てて調べることもできる（指令にないコドンでもよい）。</div>
+      <div class="slotrow" id="slots"></div>
+    </div>
+  </div>
+
+  <div class="hidden" id="lawWrap">
+    <div class="note"><b>【発展】</b>右の暗号表を見て、コドンの並びに法則がないか探してみよう。時間がなければ飛ばしてよい。</div>
+    <div class="opts" id="qLaw"></div>
+    <div class="verdict hide" id="qLawv"></div>
+  </div>
+
+  <div class="hidden" id="inferWrap">
+    <div class="note"><b>推論カードを2枚手に入れた。</b>1〜2番目の塩基を指定すると、そのマスの4つ（3番目がU・C・A・G）を試薬なしでまとめて確定できる。</div>
+    <div class="slotrow" id="inferSlots"></div>
+    <div class="actions" style="margin-top:6px">
+      <button class="btn ghost" id="runInfer" disabled>推論カードを使う（残り <span id="cardN">2</span> 枚）</button>
+    </div>
+    <div class="verdict hide" id="inferV"></div>
+  </div>
+
+  <div class="actions"><button class="btn" id="go2" disabled>暗号表を使う</button></div>
+  <p class="hist"><b>1964–1966年</b>／この方法で50以上のコドンが一気に決まり、1966年に64個すべてが出そろった。ニーレンバーグ・コラナ・ホリーは1968年にノーベル賞を受賞。</p>
+</section>
+
+<!-- 3 -->
+<section class="card hidden" data-step="3">
+  <p class="eyebrow">CODE TABLE ／ 遺伝暗号表を使う</p>
+  <h2>自分で埋めた表で、読む</h2>
+  <p class="lead">できあがった暗号表を使って、指令のmRNAを翻訳しよう。右の表を見ながらアミノ酸を選ぶ。</p>
+  <div class="mrna" id="missionStrip2"></div>
+
+  <div id="transWrap">
+    <div class="cut" id="cutRow"></div>
+    <div class="actions" style="margin-top:6px"><button class="btn" id="check3">判定する</button></div>
+    <div class="verdict hide" id="v3"></div>
+  </div>
+
+  <div class="hidden" id="kanaWrap">
+    <p class="lead" style="margin-top:16px">終止コドンで合成は終わる。先頭のメチオニンは合成後に切りはなされることが多い。<b>残ったアミノ酸の頭文字</b>を順に並べると？</p>
+    <div class="kana" id="kana"></div>
+    <div class="ansrow">
+      <input id="word" placeholder="カタカナ4文字" autocomplete="off">
+      <button class="btn sm" id="checkWord">答え合わせ</button>
+    </div>
+    <div class="verdict hide" id="vWord"></div>
+  </div>
+
+  <div class="notebox hidden" id="nb1">
+    <span class="lb">N O T E　①</span>
+    <p>コドン＝塩基3つの組（トリプレット）。64通り。遺伝暗号表は実験で決めた記録で、どの生物でもほぼ共通。</p>
+  </div>
+  <div class="actions"><button class="btn" id="go3" disabled>ゲノムへ</button></div>
+</section>
+
+<!-- 4 -->
+<section class="card hidden" data-step="4">
+  <p class="eyebrow">GENOME ／ ゲノム</p>
+  <h2>読まれる「全文」の大きさ</h2>
+  <p class="lead">暗号表は<b>読み方のルール</b>だった。では読まれる文章そのもの――<b>ゲノム</b>（その生物がもつ遺伝情報の全体）――はどれくらいか。下の数字から計算しよう。電卓を使ってよい。</p>
+  <div class="facts">ヒトのゲノム ＝ 約 3,000,000,000 塩基対（30億）　／　遺伝子 ＝ 約 20,000 個</div>
+  <div class="gq" id="gq"></div>
+  <div class="actions" style="margin-top:6px"><button class="btn" id="checkG">計算結果を確かめる</button></div>
+  <div class="hidden" id="gAfter">
+    <p class="lead" style="margin-top:16px">①は<b>15万塩基対</b>。ところが②のとおり、アミノ酸100個のタンパク質なら<b>303塩基</b>で足りる。この差は何を意味するか。</p>
+    <div class="opts" id="qG"></div>
+    <div class="verdict hide" id="qGv"></div>
+  </div>
+  <div class="notebox hidden" id="nb2">
+    <span class="lb">N O T E　②</span>
+    <p>ゲノム＝その生物の遺伝情報の全体。ヒトは約30億塩基対、遺伝子は約2万個。遺伝子はそのごく一部。</p>
+  </div>
+  <div class="actions"><button class="btn" id="go4" disabled>発現と分化へ</button></div>
+</section>
+
+<!-- 5 -->
+<section class="card hidden" data-step="5">
+  <p class="eyebrow">EXPRESSION ／ 遺伝子の発現</p>
+  <h2>設計図は、どう使われるか</h2>
+  <p class="lead">遺伝子が使われて（発現して）タンパク質ができるまでの流れを、正しい順に押していこう。まちがえると最初に戻る。</p>
+  <div class="flow" id="flow"></div>
+  <div class="track" id="track"><i>ここに順番が並ぶ</i></div>
+  <div class="verdict hide" id="vFlow"></div>
+
+  <div class="hidden" id="kartWrap">
+    <p class="lead" style="margin-top:18px">A〜Eは、同じヒトの体から取り出した5種類の細胞。それぞれで<b>はたらいている遺伝子</b>を調べた（○＝はたらいている）。どこの細胞か当てよう。</p>
+    <div class="kart" id="kart"></div>
+    <div class="actions" style="margin-top:6px"><button class="btn" id="checkK">判定する</button></div>
+    <div class="verdict hide" id="vK"></div>
+  </div>
+
+  <div class="hidden" id="kAfter">
+    <p class="lead" style="margin-top:16px">では、Aの細胞に<b>インスリンの遺伝子</b>はあるのか、ないのか。</p>
+    <div class="opts" id="qDiff"></div>
+    <div class="verdict hide" id="qDiffv"></div>
+  </div>
+
+  <div class="notebox hidden" id="nb3">
+    <span class="lb">N O T E　③ ④</span>
+    <p>③ 遺伝子の発現＝DNA →（転写）→ mRNA →（翻訳）→ タンパク質。<br>
+    ④ どの細胞も同じゲノムをもつ。はたらく遺伝子がちがうことで分化する。</p>
+  </div>
+  <div class="actions"><button class="btn" id="go5" disabled>まとめへ</button></div>
+</section>
+
+<!-- 6 -->
+<section class="card hidden" data-step="6">
+  <p class="eyebrow">DEBRIEF ／ まとめ</p>
+  <h2>ノートにまとめる</h2>
+  <div class="sum" id="sum"></div>
+  <div class="sheet">
+    <h3>ノートの方眼に、この4行を書く</h3>
+    <ol>
+      <li>コドン＝塩基3つの組（トリプレット）。64通り。遺伝暗号表は実験で決めた記録で、どの生物でもほぼ共通。</li>
+      <li>ゲノム＝その生物の遺伝情報の全体。ヒトは約30億塩基対、遺伝子は約2万個。遺伝子はそのごく一部。</li>
+      <li>遺伝子の発現＝DNA →（転写）→ mRNA →（翻訳）→ タンパク質。</li>
+      <li>どの細胞も同じゲノムをもつ。はたらく遺伝子がちがうことで分化する。</li>
+    </ol>
+    <div class="one">「今日の要点を1つ」欄 → <span style="color:var(--stamp)">同じ全文を、共通のルールで、ちがう場所だけ読む。</span></div>
+  </div>
+  <div class="oppa">
+    <span class="lb">O P P A ／ 本質的な問い</span>
+    <p class="q">遺伝子とは何か。あなたの言葉で説明しなさい。</p>
+    <p>ノートの裏面（BACK）に、今の自分の答えを書く。単元のはじめに書いた答えと見くらべて、変わったところに気づけたら、それが今日いちばんの成果である。</p>
+  </div>
+  <p class="lead">右の暗号表パネルの「教師用：全表」を開くと64個すべてがそろう。教科書の表と見くらべてみよう。</p>
+  <div class="actions">
+    <button class="btn ghost sm" id="print">記録を印刷</button>
+    <button class="btn ghost sm" id="reset">最初からやり直す</button>
+  </div>
+</section>
+
+</main>
+
+<aside>
+  <div class="panel">
+    <h3>自作・遺伝暗号表 <span id="pCount">0 / 64</span></h3>
+    <div class="tbl" id="tbl"></div>
+    <div class="foot">
+      <span>行＝1番目／列＝2番目／各行＝3番目</span>
+      <button id="revealBtn">教師用：全表</button>
+    </div>
+  </div>
+</aside>
+</div>
+</div>
+
+<script>
+"use strict";
+/* ═══ データ ═══ */
+const JP={Phe:"フェニルアラニン",Leu:"ロイシン",Ile:"イソロイシン",Met:"メチオニン",Val:"バリン",
+Ser:"セリン",Pro:"プロリン",Thr:"トレオニン",Ala:"アラニン",Tyr:"チロシン",His:"ヒスチジン",
+Gln:"グルタミン",Asn:"アスパラギン",Lys:"リシン",Asp:"アスパラギン酸",Glu:"グルタミン酸",
+Cys:"システイン",Trp:"トリプトファン",Arg:"アルギニン",Gly:"グリシン",Stop:"（終止）"};
+const SHORT={Phe:"フェニル",Leu:"ロイシン",Ile:"イソロイシン",Met:"メチオニン",Val:"バリン",
+Ser:"セリン",Pro:"プロリン",Thr:"トレオニン",Ala:"アラニン",Tyr:"チロシン",His:"ヒスチジン",
+Gln:"グルタミン",Asn:"アスパラギン",Lys:"リシン",Asp:"アスパラギン酸",Glu:"グルタミン酸",
+Cys:"システイン",Trp:"トリプト",Arg:"アルギニン",Gly:"グリシン",Stop:"終止"};
+const SPEC={"UUU UUC":"Phe","UUA UUG CUU CUC CUA CUG":"Leu","AUU AUC AUA":"Ile","AUG":"Met",
+"GUU GUC GUA GUG":"Val","UCU UCC UCA UCG AGU AGC":"Ser","CCU CCC CCA CCG":"Pro",
+"ACU ACC ACA ACG":"Thr","GCU GCC GCA GCG":"Ala","UAU UAC":"Tyr","UAA UAG UGA":"Stop",
+"CAU CAC":"His","CAA CAG":"Gln","AAU AAC":"Asn","AAA AAG":"Lys","GAU GAC":"Asp",
+"GAA GAG":"Glu","UGU UGC":"Cys","UGG":"Trp","CGU CGC CGA CGG AGA AGG":"Arg",
+"GGU GGC GGA GGG":"Gly"};
+const CODE={};
+for(const k in SPEC){k.split(" ").forEach(function(c){CODE[c]=SPEC[k];});}
+const B=["U","C","A","G"];
+const AAORDER=["Phe","Leu","Ile","Met","Val","Ser","Pro","Thr","Ala","Tyr","His","Gln",
+"Asn","Lys","Asp","Glu","Cys","Trp","Arg","Gly"];
+const MISSION="AUGUCUAUUAUGAUCUAA";
+const MC=MISSION.match(/.{3}/g);
+
+const S={step:0,found:{},reagent:10,used:0,hits:0,homo:{},reveal:false,t0:Date.now(),
+  done:{},cards:0,rival:0,rivalTimer:null};
+const $=function(id){return document.getElementById(id);};
+function el(t,c,h){var e=document.createElement(t);if(c)e.className=c;if(h!==undefined)e.innerHTML=h;return e;}
+
+/* ═══ ナビ ═══ */
+const TITLES=["はじめの問い","実験室1","トリプレット結合","遺伝暗号表を使う","ゲノム","発現と分化","まとめ"];
+function buildNav(){
+  var nav=$("nav");nav.innerHTML="";
+  TITLES.forEach(function(t,i){
+    var b=el("button",null,'<span class="n">STEP '+i+'</span>'+t);
+    b.onclick=function(){if(i<=maxStep())go(i);};
+    nav.appendChild(b);
+  });
+  paintNav();
+}
+function maxStep(){var m=0;for(var i=0;i<TITLES.length;i++){if(S.done[i])m=i+1;}
+  return Math.min(m,TITLES.length-1);}
+function paintNav(){
+  var ch=$("nav").children;
+  for(var i=0;i<ch.length;i++){
+    ch[i].dataset.state=(i===S.step)?"on":(S.done[i]?"done":"");
+    ch[i].disabled=i>maxStep();
+  }
+}
+function go(i){
+  S.step=i;
+  var secs=document.querySelectorAll("[data-step]");
+  for(var k=0;k<secs.length;k++){
+    secs[k].classList.toggle("hidden",Number(secs[k].dataset.step)!==i);
+  }
+  paintNav();
+  if(i===2)startRival();
+  if(i>2)stopRival();
+  if(i===6)buildSum();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function finish(i){S.done[i]=true;paintNav();}
+
+/* ═══ 暗号表パネル ═══ */
+function buildTable(){
+  var t=el("table"),hr=el("tr");
+  hr.appendChild(el("th"));
+  B.forEach(function(b){hr.appendChild(el("th",null,b));});
+  t.appendChild(hr);
+  B.forEach(function(b1){
+    var tr=el("tr");tr.appendChild(el("th",null,b1));
+    B.forEach(function(b2){
+      var td=el("td");
+      B.forEach(function(b3){
+        var line=el("div","cellline");line.id="c_"+(b1+b2+b3);
+        line.appendChild(el("i",null,b3));
+        line.appendChild(el("u",null,"—"));
+        td.appendChild(line);
+      });
+      tr.appendChild(td);
+    });
+    t.appendChild(tr);
+  });
+  $("tbl").innerHTML="";$("tbl").appendChild(t);
+  paintTable();
+}
+function paintTable(){
+  for(var c in CODE){
+    var line=$("c_"+c);if(!line)continue;
+    var u=line.querySelector("u");
+    if(S.found[c]){line.dataset.f="1";u.textContent=SHORT[CODE[c]];line.title=c+" ＝ "+JP[CODE[c]];}
+    else if(S.reveal){line.dataset.f="2";u.textContent=SHORT[CODE[c]];line.title=c+" ＝ "+JP[CODE[c]];}
+    else{line.dataset.f="";u.textContent="—";line.title=c+"（未解読）";}
+  }
+  var n=Object.keys(S.found).length;
+  $("pCount").textContent=n+" / 64";$("mCount").textContent=n;
+}
+function discover(c){
+  if(S.found[c])return false;
+  S.found[c]=true;paintTable();return true;
+}
+
+/* ═══ 汎用クイズ ═══ */
+function quiz(box,vbox,items,onOK){
+  var wrap=$(box),v=$(vbox);wrap.innerHTML="";
+  items.forEach(function(it){
+    var b=el("button","opt",it.t);
+    b.onclick=function(){
+      if(b.dataset.r)return;
+      b.dataset.r=it.ok?"ok":"ng";
+      v.className="verdict";v.innerHTML=it.f;
+      if(it.ok){
+        var ch=wrap.children;
+        for(var i=0;i<ch.length;i++)ch[i].disabled=true;
+        if(onOK)onOK();
+      }
+    };
+    wrap.appendChild(b);
+  });
+}
+
+/* ═══ STEP0 ═══ */
+quiz("q0","q0v",[
+ {t:"1つ（1塩基で1アミノ酸）",ok:false,f:"4<sup>1</sup> ＝ <b>4通り</b>。20種類には全然足りない。"},
+ {t:"2つ（2塩基で1アミノ酸）",ok:false,f:"4<sup>2</sup> ＝ <b>16通り</b>。おしいが、まだ20に届かない。"},
+ {t:"3つ（3塩基で1アミノ酸）",ok:true,f:"4<sup>3</sup> ＝ <b>64通り</b>。20種類を指定するのに十分。この3つ組を<b>コドン（トリプレット）</b>という。──ただしこれは計算上の予想にすぎない。<b>どの3文字がどのアミノ酸か</b>は、実験でしか分からない。"}
+],function(){$("go0").disabled=false;});
+$("go0").onclick=function(){finish(0);go(1);};
+
+/* ═══ STEP1 ホモポリマー ═══ */
+const HOMO={U:"Phe",C:"Pro",A:"Lys",G:null};
+function buildHomo(){
+  var r=$("homoBases");r.innerHTML="";
+  B.forEach(function(b){
+    var btn=el("button","base",b);btn.dataset.b=b;
+    btn.onclick=function(){runHomo(b,btn);};
+    r.appendChild(btn);
+  });
+}
+function runHomo(b,btn){
+  if(S.homo[b])return;
+  S.homo[b]=true;btn.dataset.used="1";
+  var tube=$("homoTube");tube.innerHTML="";
+  tube.classList.add("shake");
+  setTimeout(function(){tube.classList.remove("shake");},500);
+  tube.appendChild(el("div","rna","5′ "+new Array(25).join(b)+"… 3′　（poly-"+b+"）"));
+  var c=b+b+b;
+  if(HOMO[b]){
+    var chain=el("div","chain");
+    for(var i=0;i<7;i++){
+      var a=el("span","aa",JP[HOMO[b]]);a.style.animationDelay=(i*0.09)+"s";chain.appendChild(a);
+    }
+    chain.appendChild(el("span",null,"…"));
+    tube.appendChild(chain);
+    tube.appendChild(el("div",null,'<b style="color:var(--stamp)">'+c+' ＝ '+JP[HOMO[b]]+'</b> を暗号表に記入した'));
+    discover(c);
+  }else{
+    tube.appendChild(el("div","fail","ペプチドができない。poly-G は G どうしが結びついて固まってしまい、リボソームが読めなかった。──この方法の限界である。"));
+  }
+  if(Object.keys(S.homo).length===4)$("go1").disabled=false;
+}
+$("go1").onclick=function(){finish(1);go(2);};
+
+/* ═══ STEP2 トリプレット結合実験 ═══ */
+var sel=[null,null,null];
+function buildSlots(){
+  var r=$("slots");r.innerHTML="";
+  ["1番目","2番目","3番目"].forEach(function(lab,i){
+    var s=el("div","slot");
+    s.appendChild(el("span","lab",lab));
+    var bs=el("div","bs");
+    B.forEach(function(b){
+      var btn=el("button","base",b);btn.setAttribute("aria-pressed","false");
+      btn.onclick=function(){
+        sel[i]=b;
+        var ch=bs.children;
+        for(var k=0;k<ch.length;k++)ch[k].setAttribute("aria-pressed",String(ch[k].textContent===b));
+        paintTriplet();
+      };
+      bs.appendChild(btn);
+    });
+    s.appendChild(bs);r.appendChild(s);
+  });
+  $("missionStrip").innerHTML='<span>5′</span> '+MISSION+' <span>3′</span>';
+  $("missionStrip2").innerHTML='<span>5′</span> '+MISSION+' <span>3′</span>';
+}
+
+/* 予想のプルダウンは「すでに出たアミノ酸」だけを並べる（選びやすくする） */
+function refreshPredict(){
+  var p=$("pred");if(!p)return;
+  var keep=p.value;
+  p.innerHTML="";
+  p.appendChild(el("option",null,"— 予想を選ぶ（任意）—"));
+  var known=[],seen={};
+  Object.keys(S.found).forEach(function(c){
+    var a=CODE[c];
+    if(a!=="Stop"&&!seen[a]){seen[a]=1;known.push(a);}
+  });
+  known.forEach(function(a){var o=el("option",null,JP[a]);o.value=a;p.appendChild(o);});
+  var on=el("option",null,"まだ出ていない、新しいアミノ酸");on.value="new";p.appendChild(on);
+  var os=el("option",null,"アミノ酸はつかない（終止コドン）");os.value="Stop";p.appendChild(os);
+  var oq=el("option",null,"見当がつかない");oq.value="none";p.appendChild(oq);
+  p.value=keep;
+  if(p.selectedIndex<0)p.selectedIndex=0;
+}
+
+/* 調べるべきコドンのチェックリスト */
+var NEED=[];
+MC.forEach(function(c){if(NEED.indexOf(c)<0)NEED.push(c);});
+function buildNeed(){
+  var box=$("need");box.innerHTML="";
+  NEED.forEach(function(c){
+    var b=el("button",null,c+"<em>未調査</em>");
+    b.id="nd_"+c;
+    b.onclick=function(){
+      if(S.found[c])return;
+      setTriplet(c);
+    };
+    box.appendChild(b);
+  });
+  paintNeed();
+}
+function paintNeed(){
+  NEED.forEach(function(c){
+    var b=$("nd_"+c);if(!b)return;
+    if(S.found[c]){
+      b.dataset.done="1";
+      b.innerHTML=c+"<em>"+JP[CODE[c]]+"</em>";
+    }else{
+      b.innerHTML=c+"<em>未調査</em>";
+    }
+  });
+}
+/* 指定の3塩基を装置にセット（塩基ボタンの見た目も合わせる） */
+function setTriplet(c){
+  for(var i=0;i<3;i++)sel[i]=c.charAt(i);
+  var slots=$("slots").children;
+  for(var k=0;k<3;k++){
+    var bs=slots[k].querySelector(".bs").children;
+    for(var m=0;m<bs.length;m++)bs[m].setAttribute("aria-pressed",String(bs[m].textContent===sel[k]));
+  }
+  paintTriplet();
+}
+function paintTriplet(){
+  var ok=sel[0]&&sel[1]&&sel[2];
+  $("triplet").innerHTML=ok?sel.join(" "):(sel.map(function(x){return x||"—";}).join(" ")+'<br><small>上のボタンを押す</small>');
+  $("runTrip").disabled=!ok||S.reagent<=0;
+}
+function startRival(){
+  if(S.rivalTimer)return;
+  S.rivalTimer=setInterval(function(){
+    if(S.rival<64){S.rival++;$("rivalN").textContent=S.rival;}
+  },40000);
+}
+function stopRival(){if(S.rivalTimer){clearInterval(S.rivalTimer);S.rivalTimer=null;}}
+
+$("runTrip").onclick=function(){
+  if(S.reagent<=0)return;
+  var c=sel.join(""),aa=CODE[c],stop=(aa==="Stop");
+  var guess=$("pred").value;
+  var known={};
+  Object.keys(S.found).forEach(function(x){known[CODE[x]]=1;});
+  S.reagent--;S.used++;
+  var hit=(guess===aa)||(guess==="new"&&!known[aa]&&aa!=="Stop");
+  if(hit){S.hits++;S.reagent++;}
+  $("left").textContent=S.reagent;$("mUse").textContent=S.used;
+  $("hitN").textContent=S.hits;$("mHit").textContent=S.hits;
+  var line=el("div",stop?"none":(hit?"hit":null));
+  line.appendChild(el("span",null,c));
+  line.appendChild(el("span",null,(stop?"どのtRNAも結合しない":JP[aa])+(hit?"　★予想的中 +1本":"")));
+  var log=$("tripLog");
+  if(log.querySelector(".empty"))log.innerHTML="";
+  log.insertBefore(line,log.firstChild);
+  var isNew=discover(c);
+  if(stop&&isNew)addNote("<b>アミノ酸を運ぶtRNAが1つも結合しなかった。</b>この3文字はアミノ酸を指定しない。ここで翻訳は止まる――<b>終止コドン</b>である。");
+  if(c==="AUG"&&isNew)addNote("<b>AUG＝メチオニン。</b>このコドンにはもう1つ役割がある。mRNAの最初のAUGから翻訳が始まる――<b>開始コドン</b>である。");
+  paintNeed();refreshPredict();
+  if(Object.keys(S.found).length>=5)$("lawWrap").classList.remove("hidden");
+  if(MC.every(function(x){return S.found[x];}))$("go2").disabled=false;
+  $("pred").selectedIndex=0;
+  paintTriplet();
+};
+function addNote(html){
+  var n=el("div","note",html);
+  var log=$("tripLog");
+  log.parentNode.insertBefore(n,log.nextSibling);
+}
+$("extra").onclick=function(){S.reagent+=3;$("left").textContent=S.reagent;paintTriplet();};
+
+quiz("qLaw","qLawv",[
+ {t:"1番目の塩基が同じなら、いつも同じアミノ酸になる",ok:false,f:"UUU はフェニルアラニン、UCU はセリン。1番目が同じUでも別のアミノ酸である。"},
+ {t:"3番目の塩基がちがっても、同じアミノ酸になることが多い",ok:true,f:"よく気づいた。CCU・CCC・CCA・CCG はすべてプロリン。アミノ酸は20種類しかないのにコドンは64個あるので、<b>複数のコドンが同じアミノ酸を指定する</b>（重複・縮重）。とくに<b>3番目</b>の塩基は変わりやすい。──この法則を使えば、実験しなくても推論できる。<b>推論カードを2枚</b>渡そう。"},
+ {t:"コドンは全部で20個しかない",ok:false,f:"4×4×4 ＝ 64個ある。アミノ酸が20種類なのであって、コドンは64個。"}
+],function(){
+  S.cards=2;$("cardN").textContent=S.cards;
+  $("inferWrap").classList.remove("hidden");
+});
+
+var isel=[null,null];
+function buildInfer(){
+  var r=$("inferSlots");r.innerHTML="";
+  ["1番目","2番目"].forEach(function(lab,i){
+    var s=el("div","slot");
+    s.appendChild(el("span","lab",lab));
+    var bs=el("div","bs");
+    B.forEach(function(b){
+      var btn=el("button","base",b);btn.setAttribute("aria-pressed","false");
+      btn.onclick=function(){
+        isel[i]=b;
+        var ch=bs.children;
+        for(var k=0;k<ch.length;k++)ch[k].setAttribute("aria-pressed",String(ch[k].textContent===b));
+        $("runInfer").disabled=!(isel[0]&&isel[1])||S.cards<=0;
+      };
+      bs.appendChild(btn);
+    });
+    s.appendChild(bs);r.appendChild(s);
+  });
+}
+$("runInfer").onclick=function(){
+  if(S.cards<=0||!isel[0]||!isel[1])return;
+  S.cards--;$("cardN").textContent=S.cards;
+  var names=[],uniq={};
+  B.forEach(function(b3){
+    var c=isel[0]+isel[1]+b3;
+    discover(c);
+    names.push(b3+"→"+JP[CODE[c]]);
+    uniq[CODE[c]]=1;
+  });
+  var kinds=Object.keys(uniq).length;
+  var v=$("inferV");v.className="verdict";
+  var msg="<b>"+isel[0]+isel[1]+"◯ のマスを確定した。</b><br>"+names.join("　／　")+"<br>";
+  if(kinds===1)msg+="4つとも同じアミノ酸だった。<b>法則どおり</b>である。";
+  else msg+="<b style='color:var(--stamp)'>4つが同じではなかった（"+kinds+"種類）。</b>法則はいつでも成り立つわけではない。とくに AUG（メチオニン＝開始コドン）や UGA・UAA・UAG（終止コドン）は例外である。<b>推論は便利だが、最後は実験で確かめる必要がある。</b>";
+  v.innerHTML=msg;
+  paintNeed();refreshPredict();
+  if(S.cards<=0)$("runInfer").disabled=true;
+  if(MC.every(function(x){return S.found[x];}))$("go2").disabled=false;
+};
+quiz("qCut","qCutv",[
+ {t:"AU｜GUC｜UAU｜UAU｜GAU｜CUA｜A（端から2つずつ）",ok:false,f:"コドンは<b>3つずつ</b>。2つや4つで区切ることはない。"},
+ {t:"AUG｜UCU｜AUU｜AUG｜AUC｜UAA（最初のAUGから3つずつ）",ok:true,f:"正しい。<b>5′側の最初のAUG</b>から3つずつ区切る。この区切り方を<b>読み枠</b>という。これで、調べるべきコドンが決まった。"},
+ {t:"UGU｜CUA｜UUA｜UGA｜UCU｜AA（2番目の塩基から3つずつ）",ok:false,f:"1つずらして読みはじめている。<b>読み枠が1つずれるだけで、その先は全部ちがうアミノ酸</b>になってしまう。だから開始コドンが必要なのだ。"}
+],function(){
+  $("labWrap").classList.remove("hidden");
+  refreshPredict();paintNeed();
+});
+$("go2").onclick=function(){finish(2);go(3);buildCut();};
+
+/* ═══ STEP3 暗号表を使う ═══ */
+function buildCut(){
+  var r=$("cutRow");if(r.dataset.built)return;r.dataset.built="1";
+  var opts=[],seen={};
+  Object.keys(S.found).forEach(function(c){
+    var a=CODE[c];if(!seen[a]){seen[a]=1;opts.push(a);}
+  });
+  MC.forEach(function(c,i){
+    var box=el("div","codonbox");
+    box.appendChild(el("div","c",c));
+    var s=el("select");s.dataset.i=i;
+    s.appendChild(el("option",null,"えらぶ"));
+    opts.forEach(function(a){var o=el("option",null,JP[a]);o.value=a;s.appendChild(o);});
+    box.appendChild(s);r.appendChild(box);
+  });
+}
+$("check3").onclick=function(){
+  var boxes=$("cutRow").children,allOK=true;
+  for(var i=0;i<boxes.length;i++){
+    var v=boxes[i].querySelector("select").value,ok=(v===CODE[MC[i]]);
+    boxes[i].dataset.ok=ok?"1":"0";if(!ok)allOK=false;
+  }
+  var v3=$("v3");v3.className="verdict";
+  if(allOK){
+    v3.innerHTML="全問正解。自分の手で解読した暗号表で、mRNAが読めた。";
+    $("kanaWrap").classList.remove("hidden");buildKana();
+  }else v3.innerHTML="赤い枠のところを、右の暗号表でもう一度確かめよう。";
+};
+function buildKana(){
+  var k=$("kana");if(k.dataset.built)return;k.dataset.built="1";
+  MC.forEach(function(c,i){
+    var aa=CODE[c],b;
+    if(aa==="Stop"){b=el("b","mute","止");}
+    else{b=el("b",i===0?"mute":null,JP[aa].charAt(0));}
+    b.style.animationDelay=(i*0.12)+"s";k.appendChild(b);
+  });
+}
+$("checkWord").onclick=function(){
+  var w=$("word").value.trim(),v=$("vWord");v.className="verdict";
+  if(["セイメイ","せいめい","生命"].indexOf(w)>=0){
+    v.innerHTML="正解。<b>セイメイ＝生命</b>。──この64通りの暗号は、地球上のほぼすべての生物で共通である。";
+    $("nb1").classList.remove("hidden");
+    $("go3").disabled=false;
+  }else v.innerHTML="ちがう。赤い4文字をそのまま順に並べてみよう。";
+};
+$("go3").onclick=function(){finish(3);go(4);};
+
+/* ═══ STEP4 ゲノム ═══ */
+const GQ=[
+ {q:"遺伝子1個あたり、平均して何塩基対か。（30億 ÷ 2万）",u:"塩基対",a:150000,tol:0,
+  ok:"<b>15万塩基対</b>。ずいぶん長い。",ng:"30億 ÷ 2万 を計算しよう。"},
+ {q:"アミノ酸100個のタンパク質を指定するには、終止コドンまで含めて何塩基必要か。",u:"塩基",a:303,tol:0,
+  ok:"<b>303塩基</b>。100×3 に、終止コドンの3を足す。",ng:"アミノ酸1個につき3塩基。終止コドンの3を足し忘れていないか。"},
+ {q:"30億塩基対を、1ページ3000文字の本に書き写すと何ページになるか。",u:"ページ",a:1000000,tol:0,
+  ok:"<b>約100万ページ</b>。300ページの本で3300冊分。",ng:"30億 ÷ 3000 を計算しよう。"}
+];
+function pnum(t){
+  t=(t||"").replace(/[,\s，、]/g,"").replace(/[０-９．]/g,function(c){
+    return String.fromCharCode(c.charCodeAt(0)-65248);});
+  var m=t.match(/^(\d+(?:\.\d+)?)億(?:(\d+(?:\.\d+)?)万)?$/);
+  if(m)return Number(m[1])*1e8+Number(m[2]||0)*1e4;
+  m=t.match(/^(\d+(?:\.\d+)?)万$/);
+  if(m)return Number(m[1])*1e4;
+  return /^\d+(\.\d+)?$/.test(t)?Number(t):NaN;
+}
+function buildG(){
+  var box=$("gq");box.innerHTML="";
+  GQ.forEach(function(g,i){
+    var r=el("div","row");
+    r.appendChild(el("div","q","<b>"+"①②③".charAt(i)+"</b>"+g.q));
+    var inp=document.createElement("input");inp.id="g"+i;inp.autocomplete="off";inp.placeholder="—";
+    r.appendChild(inp);
+    r.appendChild(el("div","u",g.u));
+    var fb=el("div","fb","");fb.id="gf"+i;r.appendChild(fb);
+    box.appendChild(r);
+  });
+}
+$("checkG").onclick=function(){
+  var all=true;
+  GQ.forEach(function(g,i){
+    var v=pnum($("g"+i).value),fb=$("gf"+i);
+    var ok=!isNaN(v)&&(g.tol?Math.abs(v-g.a)<=g.tol:v===g.a);
+    fb.className="fb "+(ok?"ok":"ng");
+    fb.innerHTML=(ok?"○　":"×　")+(ok?g.ok:g.ng);
+    if(!ok)all=false;
+  });
+  if(all)$("gAfter").classList.remove("hidden");
+};
+quiz("qG","qGv",[
+ {t:"遺伝子1個が、何百種類ものタンパク質をつくっているから",ok:false,f:"1つの遺伝子が指定するタンパク質は、基本的に1種類である。"},
+ {t:"ゲノムの大部分は、タンパク質を指定していない部分だから",ok:true,f:"正しい。ヒトのゲノムでタンパク質を指定している部分は<b>ごく一部</b>にすぎない。残りの多くは、<b>どの遺伝子をいつはたらかせるかを決める</b>はたらきをもつ。──この「調節」が、次のミッションの鍵になる。"},
+ {t:"計算がまちがっている",ok:false,f:"計算は合っている。この差そのものに意味がある。"}
+],function(){
+  $("nb2").classList.remove("hidden");
+  $("go4").disabled=false;
+});
+$("go4").onclick=function(){finish(4);go(5);};
+
+/* ═══ STEP5 発現と分化 ═══ */
+const FLOW=["DNA","転写","mRNA","翻訳","タンパク質"];
+var flowPos=0;
+function buildFlow(){
+  var r=$("flow");r.innerHTML="";
+  var order=[2,4,0,3,1];
+  order.forEach(function(idx){
+    var b=el("button",null,FLOW[idx]);
+    b.dataset.i=String(idx);
+    b.onclick=function(){clickFlow(Number(b.dataset.i),b);};
+    r.appendChild(b);
+  });
+  paintTrack();
+}
+function paintTrack(){
+  var t=$("track");t.innerHTML="";
+  if(flowPos===0){t.appendChild(el("i",null,"ここに順番が並ぶ"));return;}
+  for(var i=0;i<flowPos;i++){
+    t.appendChild(el("span",null,FLOW[i]));
+    if(i<flowPos-1)t.appendChild(el("i",null,"→"));
+  }
+}
+function clickFlow(idx,btn){
+  var v=$("vFlow");
+  if(idx===flowPos){
+    flowPos++;btn.disabled=true;paintTrack();
+    if(flowPos===FLOW.length){
+      v.className="verdict";
+      v.innerHTML="正解。<b>DNA →（転写）→ mRNA →（翻訳）→ タンパク質</b>。この流れを<b>遺伝子の発現</b>という。すべての遺伝子がいつもこの流れを進むわけではなく、<b>必要なときに、必要な遺伝子だけ</b>が発現する。";
+      $("kartWrap").classList.remove("hidden");
+    }else{v.className="verdict";v.innerHTML="いいぞ。次は？";}
+  }else{
+    flowPos=0;paintTrack();
+    var ch=$("flow").children;
+    for(var i=0;i<ch.length;i++)ch[i].disabled=false;
+    v.className="verdict";v.innerHTML="順番がちがう。最初に戻る。──設計図そのものはどれか、から考えよう。";
+  }
+}
+const CELLS=["A","B","C","D","E"];
+const GENES=[
+ ["ヘモグロビン（酸素を運ぶ）",[1,0,0,0,0]],
+ ["インスリン（血糖を下げる）",[0,1,0,0,0]],
+ ["アミラーゼ（デンプンを分解）",[0,0,1,0,0]],
+ ["ケラチン（かたい繊維をつくる）",[0,0,0,1,0]],
+ ["ミオシン（縮む）",[0,0,0,0,1]],
+ ["ATPをつくる酵素",[1,1,1,1,1]]
+];
+const IDENT=["赤血球のもと","すい臓の細胞","だ腺の細胞","表皮（皮ふ）の細胞","筋肉の細胞"];
+function buildK(){
+  var box=$("kart");if(box.dataset.built)return;box.dataset.built="1";
+  var t=el("table"),hr=el("tr");
+  hr.appendChild(el("th",null,"はたらいている遺伝子"));
+  CELLS.forEach(function(c){hr.appendChild(el("th",null,"細胞 "+c));});
+  t.appendChild(hr);
+  GENES.forEach(function(g){
+    var tr=el("tr");tr.appendChild(el("td","n",g[0]));
+    g[1].forEach(function(x){tr.appendChild(el("td",x?"o":"x",x?"○":"×"));});
+    t.appendChild(tr);
+  });
+  var ar=el("tr");ar.appendChild(el("td","n","この細胞の正体は？"));
+  CELLS.forEach(function(c,i){
+    var td=el("td");td.id="k"+i;
+    var s=el("select");s.appendChild(el("option",null,"えらぶ"));
+    IDENT.forEach(function(x){var o=el("option",null,x);o.value=x;s.appendChild(o);});
+    td.appendChild(s);ar.appendChild(td);
+  });
+  t.appendChild(ar);box.appendChild(t);
+}
+$("checkK").onclick=function(){
+  var all=true;
+  CELLS.forEach(function(c,i){
+    var td=$("k"+i),ok=(td.querySelector("select").value===IDENT[i]);
+    td.dataset.ok=ok?"1":"0";if(!ok)all=false;
+  });
+  var v=$("vK");v.className="verdict";
+  if(all){
+    v.innerHTML="全問正解。決め手は、その細胞でしかはたらいていない遺伝子。<b>ATPをつくる酵素はどの細胞でも○</b>なので手がかりにならない――生きるためにどの細胞も必要とする遺伝子だからである。";
+    $("kAfter").classList.remove("hidden");
+  }else v.innerHTML="赤い枠をもう一度。その細胞だけで○になっている遺伝子は何か、から考えよう。";
+};
+quiz("qDiff","qDiffv",[
+ {t:"ない。分化のときに、いらない遺伝子は捨てられるから",ok:false,f:"分化してもDNAは失われない。もし捨てられているなら、分化した細胞から個体を再生することはできないはずである。"},
+ {t:"ある。ただし、はたらいていない（発現していない）だけ",ok:true,f:"正しい。これが<b>分化</b>である。どの細胞も<b>同じゲノム</b>をもち、そのうち<b>どこを読むか</b>だけがちがう。だから遺伝子は「ある／ない」ではなく<b>「はたらいている／いない」</b>で考える。"},
+ {t:"ある。そしてどの細胞でもはたらいている",ok:false,f:"それでは全身でインスリンがつくられてしまう。表のAの列を見直そう。"}
+],function(){
+  $("nb3").classList.remove("hidden");
+  $("go5").disabled=false;
+});
+$("go5").onclick=function(){finish(5);go(6);};
+
+/* ═══ STEP6 まとめ ═══ */
+function buildSum(){
+  var min=Math.floor((Date.now()-S.t0)/60000);
+  var s=$("sum");s.innerHTML="";
+  [["班名",$("team").value||"—"],["解読コドン",Object.keys(S.found).length+" 個"],
+   ["使った試薬",S.used+" 本"],["予想的中",S.hits+" 回"],["所要時間",min+" 分"]]
+  .forEach(function(p){
+    var d=el("div");d.appendChild(el("b",null,p[1]));d.appendChild(el("span",null,p[0]));s.appendChild(d);
+  });
+}
+$("print").onclick=function(){window.print();};
+$("reset").onclick=function(){if(confirm("最初からやり直しますか？"))location.reload();};
+
+/* ═══ 教師用 ═══ */
+$("revealBtn").onclick=function(){
+  S.reveal=!S.reveal;
+  $("revealBtn").textContent=S.reveal?"解読分のみ":"教師用：全表";
+  paintTable();
+};
+
+/* ═══ 時計 ═══ */
+setInterval(function(){
+  var s=Math.floor((Date.now()-S.t0)/1000);
+  $("mTime").textContent=Math.floor(s/60)+":"+("0"+(s%60)).slice(-2);
+},1000);
+
+/* ═══ 起動 ═══ */
+buildNav();buildTable();buildHomo();buildSlots();buildNeed();buildInfer();buildG();buildFlow();buildK();go(0);
+</script>
