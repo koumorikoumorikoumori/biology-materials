@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ニューロン学習ラボ — 伝導と伝達</title>
+<style>
+:root{
+  --bg:#eef4f8;--card:#fff;--border:#c8d8e4;
+  --ink:#14202e;--ink2:#4a5a6e;--ink3:#8a9aae;
+  --neuron:#0d4a6e;--neuron2:#1a6e9e;--nbg:#e4f0f8;
+  --cond:#b8430a;--cond2:#e8650a;--condbg:#fdeee2;
+  --trans:#2a7048;--trans2:#3a9060;--transbg:#e6f4ec;
+  --na:#c83030;--k:#2a5cc8;
+  --gold:#c89020;--ok:#16803c;--warn:#b8860b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans JP',system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+
+#hdr{background:linear-gradient(135deg,#0a3352,#1a6e9e);color:#fff;padding:18px 24px}
+#hdr h1{font-size:1.3rem;font-weight:700;letter-spacing:.03em;margin-bottom:3px}
+#hdr p{font-size:.8rem;opacity:.85}
+
+.phase-banner{background:linear-gradient(135deg,#fff8e8,#ffefc8);border:2px solid var(--gold);border-radius:10px;margin:14px;padding:11px 18px;display:flex;gap:12px;align-items:center}
+.phase-icon{font-size:1.7rem}
+.phase-banner p{font-size:.84rem;color:#6a5010;line-height:1.5}
+
+.tab-nav{display:flex;gap:0;padding:0 12px;flex-wrap:wrap}
+.tab-btn{padding:10px 15px;font-size:.82rem;font-weight:600;color:var(--ink3);background:#dde8f0;border:none;cursor:pointer;border-radius:8px 8px 0 0;margin-right:3px;border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap}
+.tab-btn.active{color:#fff;background:var(--neuron);border-bottom-color:var(--gold)}
+
+.tab-pane{display:none;padding:18px 16px 40px;max-width:1000px;margin:0 auto}
+.tab-pane.active{display:block;animation:fade .3s}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+
+.panel{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.panel h2{font-size:1.05rem;color:var(--neuron);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.panel p{font-size:.86rem;color:var(--ink2);line-height:1.65;margin-bottom:8px}
+.step-label{display:inline-block;background:var(--neuron);color:#fff;font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:12px;margin-bottom:8px}
+.step-label.solo{background:var(--cond)}
+.step-label.pair{background:var(--trans)}
+
+.btn{padding:9px 18px;border-radius:6px;border:none;font-size:.84rem;font-weight:700;cursor:pointer;transition:all .2s}
+.btn-n{background:var(--neuron);color:#fff}.btn-n:hover{background:var(--neuron2)}
+.btn-c{background:var(--cond);color:#fff}.btn-c:hover{background:var(--cond2)}
+.btn-t{background:var(--trans);color:#fff}.btn-t:hover{background:var(--trans2)}
+.btn-ghost{background:#fff;color:var(--ink2);border:1.5px solid var(--border)}
+.btn-ghost:hover{border-color:var(--neuron)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+
+/* ═══ FLASHCARDS ═══ */
+.fc-progress{font-size:.8rem;color:var(--ink3);text-align:center;margin-bottom:10px}
+.flashcard{background:linear-gradient(135deg,#f4f9fc,#e4f0f8);border:2px solid var(--neuron);border-radius:14px;min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;cursor:pointer;transition:transform .15s;user-select:none;text-align:center}
+.flashcard:active{transform:scale(0.98)}
+.fc-term{font-size:1.5rem;font-weight:700;color:var(--neuron);margin-bottom:8px}
+.fc-hint{font-size:.82rem;color:var(--ink3)}
+.fc-def{font-size:.98rem;color:var(--ink);line-height:1.6;margin-top:6px}
+.fc-flip-hint{position:absolute;bottom:10px;right:14px;font-size:.68rem;color:var(--ink3)}
+.flashcard{position:relative}
+.fc-nav{display:flex;gap:10px;justify-content:center;margin-top:14px;align-items:center}
+.fc-known{display:flex;gap:8px;justify-content:center;margin-top:10px}
+
+/* ═══ NEURON STRUCTURE ═══ */
+.neuron-svg-wrap{background:#f8fbfd;border-radius:10px;padding:12px;margin:12px 0}
+.parts-quiz{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;justify-content:center}
+.part-chip{padding:8px 14px;border:2px solid var(--border);border-radius:20px;background:#fff;cursor:pointer;font-size:.82rem;font-weight:600;transition:all .2s;user-select:none}
+.part-chip.selected{border-color:var(--gold);background:#fff8ec}
+.part-chip.placed{opacity:.4;pointer-events:none}
+.hotspot{cursor:pointer;transition:all .2s}
+.hotspot:hover{opacity:.7}
+.hotspot-label{font-size:11px;font-weight:700;fill:var(--neuron)}
+
+/* ═══ CONDUCTION ANIMATION ═══ */
+.axon-stage{background:#0d1a24;border-radius:12px;padding:24px 16px;margin:12px 0;position:relative;overflow:hidden}
+.axon-track{position:relative;height:80px;margin:20px 0}
+.axon-membrane{position:absolute;top:50%;left:0;right:0;height:40px;transform:translateY(-50%);background:linear-gradient(180deg,#2a4a6a,#1a3a5a);border-radius:20px;border:2px solid #3a5a7a}
+.impulse{position:absolute;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:radial-gradient(circle,#ffe040,#e8650a);box-shadow:0 0 20px #ffa040,0 0 40px #e8650a;left:0;opacity:0;transition:none;display:flex;align-items:center;justify-content:center;font-size:1.2rem}
+.ion-label{position:absolute;font-size:.72rem;font-weight:700;color:#fff;opacity:.8}
+.charge-row{display:flex;justify-content:space-around;margin-top:10px;font-size:.78rem;color:#a0c0d8}
+.myelin-toggle{display:flex;gap:8px;margin-bottom:12px}
+.myelin-btn{flex:1;padding:9px;border:2px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-size:.82rem;font-weight:600;transition:all .2s}
+.myelin-btn.active{border-color:var(--cond);background:var(--condbg);color:var(--cond)}
+.speed-display{text-align:center;font-size:.86rem;font-weight:700;color:var(--cond);margin-top:8px;min-height:24px}
+
+/* ═══ SYNAPSE ═══ */
+.synapse-stage{background:#0d1f16;border-radius:12px;padding:20px;margin:12px 0;min-height:260px;position:relative}
+.synapse-step-ind{display:flex;gap:6px;justify-content:center;margin-bottom:14px;flex-wrap:wrap}
+.syn-step{padding:5px 11px;border-radius:14px;font-size:.72rem;font-weight:700;border:1.5px solid var(--trans2);color:var(--trans2);opacity:.4;transition:all .3s}
+.syn-step.active{opacity:1;background:rgba(58,144,96,.25)}
+.syn-step.done{opacity:1;background:var(--trans);color:#fff}
+.syn-viz{position:relative;height:180px}
+.vesicle{position:absolute;width:18px;height:18px;border-radius:50%;background:#5ad080;border:1px solid #2a7048;transition:all 1s}
+.nt-dot{position:absolute;width:8px;height:8px;border-radius:50%;background:#ffe040;transition:all .8s}
+
+/* ═══ SELF CHECK ═══ */
+.selfcheck-q{background:#f8fbfd;border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px}
+.selfcheck-q .q-text{font-size:.9rem;font-weight:600;margin-bottom:10px}
+.sc-opt{display:block;width:100%;text-align:left;padding:10px 14px;margin:6px 0;border:1.5px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-size:.85rem;transition:all .2s}
+.sc-opt:hover{border-color:var(--neuron2);background:#f4faff}
+.sc-opt.correct{border-color:var(--ok);background:#f0fdf4;font-weight:600}
+.sc-opt.wrong{border-color:var(--na);background:#fef2f2}
+.sc-explain{margin-top:8px;padding:10px 14px;border-radius:8px;font-size:.82rem;background:#eff6ff;color:#1a5090;display:none}
+.sc-explain.show{display:block}
+
+.result-msg{margin-top:12px;padding:11px 15px;border-radius:8px;font-size:.85rem;font-weight:600;line-height:1.6}
+.result-ok{background:#f0fdf4;color:var(--ok);border:1.5px solid #86efac}
+.result-info{background:#eff6ff;color:#1a5090;border:1.5px solid #93c5fd}
+.pair-prompt{background:var(--transbg);border-left:4px solid var(--trans);padding:10px 14px;border-radius:0 6px 6px 0;font-size:.84rem;color:#1a5c3a;margin:12px 0}
+.solo-prompt{background:var(--condbg);border-left:4px solid var(--cond);padding:10px 14px;border-radius:0 6px 6px 0;font-size:.84rem;color:#8a3810;margin:12px 0}
+
+#ftr{text-align:center;padding:16px;font-size:.72rem;color:var(--ink3);border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <h1>⚡ ニューロン学習ラボ — 伝導と伝達</h1>
+  <p>高校生物 第10章 第2節 / 個別に学び、仲間と教え合おう</p>
+</div>
+
+<div class="phase-banner">
+  <div class="phase-icon">🔄</div>
+  <div><p><strong>学び方：</strong>まず🟠<strong>ひとりで</strong>操作して理解し、次に🟢<strong>ペアで</strong>説明し合おう。「自分で分かる」→「人に説明できる」で、知識が本物になる。</p></div>
+</div>
+
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="showTab('terms')">📇 用語カード</button>
+  <button class="tab-btn" onclick="showTab('structure')">🧬 ニューロンの構造</button>
+  <button class="tab-btn" onclick="showTab('conduction')">⚡ 興奮の伝導</button>
+  <button class="tab-btn" onclick="showTab('synapse')">🔗 興奮の伝達</button>
+  <button class="tab-btn" onclick="showTab('check')">✅ 自己確認</button>
+</div>
+
+<!-- ═══ FLASHCARDS ═══ -->
+<div id="tab-terms" class="tab-pane active">
+  <div class="panel">
+    <span class="step-label solo">🟠 STEP 1：ひとりで</span>
+    <h2>📇 用語フラッシュカード</h2>
+    <p>カードをタップすると答えが出る。分かったら「わかった」、あやしければ「もう一度」。全部「わかった」を目指そう。</p>
+    <div class="fc-progress" id="fc-progress">1 / 10</div>
+    <div class="flashcard" id="flashcard" onclick="flipCard()">
+      <div id="fc-content"></div>
+      <div class="fc-flip-hint">タップで裏返す</div>
+    </div>
+    <div class="fc-nav">
+      <button class="btn btn-ghost" onclick="prevCard()">← 前へ</button>
+      <button class="btn btn-ghost" onclick="nextCard()">次へ →</button>
+    </div>
+    <div class="fc-known">
+      <button class="btn btn-c" onclick="markCard(false)">🔁 もう一度</button>
+      <button class="btn btn-t" onclick="markCard(true)">✓ わかった</button>
+    </div>
+    <div id="fc-result"></div>
+    <div class="pair-prompt">🟢 <strong>STEP 2：ペアで</strong> — カードを1枚ずつ見せ合い、相手に用語の意味を説明してもらおう。説明できたら合格！</div>
+  </div>
+</div>
+
+<!-- ═══ STRUCTURE ═══ -->
+<div id="tab-structure" class="tab-pane">
+  <div class="panel">
+    <span class="step-label solo">🟠 STEP 1：ひとりで</span>
+    <h2>🧬 ニューロンの構造を組み立てよう</h2>
+    <p>下の部分名を、正しい場所のマーク（①〜④）に置いてみよう。名前をタップ→図の番号をタップ。</p>
+    <div class="neuron-svg-wrap" id="neuron-svg-wrap"></div>
+    <div class="parts-quiz" id="parts-quiz"></div>
+    <div id="structure-result"></div>
+    <div class="pair-prompt">🟢 <strong>STEP 2：ペアで</strong> — 「刺激はどの部分から入って、どの向きに伝わる？」を相手に説明しよう。（答え：樹状突起→細胞体→軸索→末端）</div>
+  </div>
+</div>
+
+<!-- ═══ CONDUCTION ═══ -->
+<div id="tab-conduction" class="tab-pane">
+  <div class="panel">
+    <span class="step-label solo">🟠 STEP 1：ひとりで</span>
+    <h2>⚡ 興奮の伝導 ― 1本の神経の中を伝わる</h2>
+    <p>刺激が来ると、その部分の膜が興奮し、隣へ隣へと伝わっていく。これが<strong>伝導</strong>。ボタンを押して観察しよう。</p>
+
+    <div class="myelin-toggle">
+      <div class="myelin-btn active" id="myelin-off" onclick="setMyelin(false)">通常の軸索（無髄）</div>
+      <div class="myelin-btn" id="myelin-on" onclick="setMyelin(true)">髄鞘つき（有髄）</div>
+    </div>
+
+    <div class="axon-stage">
+      <div class="axon-track" id="axon-track">
+        <div class="axon-membrane"></div>
+        <div class="impulse" id="impulse">⚡</div>
+      </div>
+      <div class="charge-row"><span>← 刺激が来た側</span><span id="cond-phase">静止状態（外＋・内−）</span><span>次の細胞へ →</span></div>
+    </div>
+    <div class="speed-display" id="speed-display"></div>
+
+    <div class="btn-row">
+      <button class="btn btn-c" onclick="runConduction()">▶ 興奮を伝える</button>
+      <button class="btn btn-ghost" onclick="resetConduction()">リセット</button>
+    </div>
+    <div class="solo-prompt" id="cond-explain">💭 有髄と無髄、どちらが速い？両方試して比べてみよう。</div>
+    <div class="pair-prompt">🟢 <strong>STEP 2：ペアで</strong> — 「なぜ髄鞘があると速いのか」を相手に説明しよう。（ヒント：興奮が髄鞘をとびこえる＝跳躍伝導）</div>
+  </div>
+</div>
+
+<!-- ═══ SYNAPSE ═══ -->
+<div id="tab-synapse" class="tab-pane">
+  <div class="panel">
+    <span class="step-label solo">🟠 STEP 1：ひとりで</span>
+    <h2>🔗 興奮の伝達 ― 次の細胞へ受け渡す</h2>
+    <p>ニューロンとニューロンのつなぎ目を<strong>シナプス</strong>という。ここでは興奮が「物質」を使って伝わる。順に見てみよう。</p>
+
+    <div class="synapse-stage">
+      <div class="synapse-step-ind">
+        <div class="syn-step" id="syn-1">①興奮が末端に到達</div>
+        <div class="syn-step" id="syn-2">②物質を放出</div>
+        <div class="syn-step" id="syn-3">③次の細胞が受け取る</div>
+        <div class="syn-step" id="syn-4">④次の細胞が興奮</div>
+      </div>
+      <div class="syn-viz" id="syn-viz"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-t" id="syn-next-btn" onclick="synNextStep()">▶ 次のステップ</button>
+      <button class="btn btn-ghost" onclick="resetSynapse()">最初から</button>
+    </div>
+    <div id="syn-explain" class="solo-prompt"></div>
+    <div class="pair-prompt">🟢 <strong>STEP 2：ペアで</strong> — 「伝導」と「伝達」の違いを相手に説明しよう。（伝導＝1本の中／伝達＝細胞から細胞へ、物質を使う）</div>
+  </div>
+</div>
+
+<!-- ═══ SELF CHECK ═══ -->
+<div id="tab-check" class="tab-pane">
+  <div class="panel">
+    <span class="step-label">✅ 個別確認</span>
+    <h2>✅ 自己確認クイズ（小テスト前の力だめし）</h2>
+    <p>ここまでの内容を確認しよう。まちがえた所は、もう一度タブに戻って復習！</p>
+    <div id="selfcheck-container"></div>
+    <div class="btn-row"><button class="btn btn-n" onclick="gradeSelfcheck()">採点する</button><button class="btn btn-ghost" onclick="resetSelfcheck()">やり直す</button></div>
+    <div id="selfcheck-result"></div>
+    <div class="pair-prompt">🟢 <strong>最後にペアで</strong> — お互いのまちがえた問題を教え合って、全員が全問できる状態にしよう。それから小テストへ！</div>
+  </div>
+</div>
+
+<div id="ftr">高校生物 第10章第2節 — ニューロン学習ラボ / 個別最適 × 協働的な学び © 2026</div>
+
+<script>
+'use strict';
+
+function showTab(t){
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  document.querySelector(`[onclick="showTab('${t}')"]`).classList.add('active');
+}
+
+// ═══════════ FLASHCARDS ═══════════
+const CARDS = [
+  {term:'ニューロン', hint:'神経系をつくる基本単位', def:'神経細胞のこと。刺激の情報を電気信号として受け取り、伝える細胞。'},
+  {term:'樹状突起', hint:'情報の入口', def:'細胞体から枝分かれした短い突起。ほかの細胞から刺激（情報）を受け取る部分。'},
+  {term:'細胞体', hint:'核がある中心部', def:'核をもつニューロンの本体。受け取った情報を集める。'},
+  {term:'軸索', hint:'情報の通り道（長い）', def:'細胞体から長くのびた突起。興奮を末端まで伝える電線のような部分。'},
+  {term:'髄鞘（ずいしょう）', hint:'軸索を包むさや', def:'軸索を包む絶縁性のさや。これがあると興奮が速く伝わる（跳躍伝導）。'},
+  {term:'静止電位', hint:'刺激がないときの電位', def:'興奮していないときの膜の内外の電位差。細胞の外が＋、内が−になっている。'},
+  {term:'活動電位', hint:'興奮したときの電位', def:'刺激を受けて興奮したとき、一瞬だけ内外の＋−が逆転する電位変化。これが興奮の正体。'},
+  {term:'伝導', hint:'1本の神経の中', def:'1本のニューロンの軸索の中を、興奮が端まで伝わっていくこと。'},
+  {term:'シナプス', hint:'ニューロンのつなぎ目', def:'ニューロンの末端と次の細胞の間の、わずかなすきま（つなぎ目）。'},
+  {term:'伝達', hint:'細胞から細胞へ', def:'シナプスで、興奮が神経伝達物質という化学物質を使って次の細胞へ伝わること。'},
+];
+let fcIndex = 0, fcFlipped = false;
+const fcKnown = new Array(CARDS.length).fill(false);
+
+function renderCard(){
+  const c = CARDS[fcIndex];
+  const content = document.getElementById('fc-content');
+  if(fcFlipped){
+    content.innerHTML = `<div class="fc-def">${c.def}</div>`;
+  } else {
+    content.innerHTML = `<div class="fc-term">${c.term}</div><div class="fc-hint">💡 ${c.hint}</div>`;
+  }
+  document.getElementById('fc-progress').textContent = `${fcIndex+1} / ${CARDS.length}　（わかった：${fcKnown.filter(Boolean).length}）`;
+  document.getElementById('flashcard').style.borderColor = fcKnown[fcIndex] ? 'var(--ok)' : 'var(--neuron)';
+}
+function flipCard(){ fcFlipped = !fcFlipped; renderCard(); }
+function nextCard(){ fcIndex = (fcIndex+1)%CARDS.length; fcFlipped=false; renderCard(); }
+function prevCard(){ fcIndex = (fcIndex-1+CARDS.length)%CARDS.length; fcFlipped=false; renderCard(); }
+function markCard(known){
+  fcKnown[fcIndex] = known;
+  const total = fcKnown.filter(Boolean).length;
+  const res = document.getElementById('fc-result');
+  if(total===CARDS.length){
+    res.innerHTML = '<div class="result-msg result-ok">🎉 全10語「わかった」！ ペアで説明し合ってみよう。</div>';
+  } else {
+    res.innerHTML = '';
+  }
+  if(known){ setTimeout(nextCard, 250); } else { renderCard(); }
+}
+
+// ═══════════ NEURON STRUCTURE ═══════════
+const NEURON_PARTS = [
+  {id:1, name:'樹状突起'},
+  {id:2, name:'細胞体'},
+  {id:3, name:'軸索'},
+  {id:4, name:'軸索末端'},
+];
+let structPlaced = {}; // id -> true
+let structSel = null;
+
+function neuronSVG(){
+  return `<svg viewBox="0 0 640 200" style="width:100%;max-width:640px">
+    <!-- dendrites -->
+    <g id="hs-1" class="hotspot" onclick="placePart(1)">
+      <path d="M 90 100 L 40 60 M 90 100 L 35 100 M 90 100 L 45 140 M 90 100 L 70 45 M 90 100 L 70 155" stroke="#4a90c0" stroke-width="4" fill="none"/>
+      <circle cx="60" cy="100" r="14" fill="${structPlaced[1]?'#3a9060':'#3a5a7a'}" opacity="0.4"/>
+      <text x="60" y="105" text-anchor="middle" class="hotspot-label" fill="#fff">${structPlaced[1]?'✓':'①'}</text>
+    </g>
+    <!-- cell body -->
+    <g id="hs-2" class="hotspot" onclick="placePart(2)">
+      <circle cx="120" cy="100" r="34" fill="#a0d0f0" stroke="#1a6e9e" stroke-width="2.5"/>
+      <circle cx="120" cy="100" r="12" fill="#1a6e9e"/>
+      <circle cx="155" cy="100" r="13" fill="${structPlaced[2]?'#3a9060':'#3a5a7a'}" opacity="0.55"/>
+      <text x="155" y="105" text-anchor="middle" class="hotspot-label" fill="#fff">${structPlaced[2]?'✓':'②'}</text>
+    </g>
+    <!-- axon -->
+    <g id="hs-3" class="hotspot" onclick="placePart(3)">
+      <rect x="154" y="92" width="360" height="16" rx="8" fill="#c8a860"/>
+      <rect x="200" y="90" width="40" height="20" rx="10" fill="#e8d0a0" stroke="#c8a860"/>
+      <rect x="290" y="90" width="40" height="20" rx="10" fill="#e8d0a0" stroke="#c8a860"/>
+      <rect x="380" y="90" width="40" height="20" rx="10" fill="#e8d0a0" stroke="#c8a860"/>
+      <circle cx="330" cy="70" r="13" fill="${structPlaced[3]?'#3a9060':'#3a5a7a'}" opacity="0.55"/>
+      <text x="330" y="75" text-anchor="middle" class="hotspot-label" fill="#fff">${structPlaced[3]?'✓':'③'}</text>
+    </g>
+    <!-- axon terminal -->
+    <g id="hs-4" class="hotspot" onclick="placePart(4)">
+      <path d="M 514 100 L 560 70 M 514 100 L 570 100 M 514 100 L 560 130" stroke="#c8600a" stroke-width="4" fill="none"/>
+      <circle cx="562" cy="70" r="7" fill="#e8650a"/><circle cx="574" cy="100" r="7" fill="#e8650a"/><circle cx="562" cy="130" r="7" fill="#e8650a"/>
+      <circle cx="540" cy="100" r="13" fill="${structPlaced[4]?'#3a9060':'#3a5a7a'}" opacity="0.55"/>
+      <text x="540" y="105" text-anchor="middle" class="hotspot-label" fill="#fff">${structPlaced[4]?'✓':'④'}</text>
+    </g>
+    <!-- direction arrow -->
+    <text x="320" y="180" text-anchor="middle" font-size="12" fill="#8a9aae">興奮の伝わる向き →</text>
+    <path d="M 60 165 L 560 165" stroke="#8a9aae" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arr)"/>
+    <defs><marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#8a9aae"/></marker></defs>
+  </svg>`;
+}
+function renderStructure(){
+  document.getElementById('neuron-svg-wrap').innerHTML = neuronSVG();
+  const quiz = document.getElementById('parts-quiz');
+  quiz.innerHTML = '';
+  NEURON_PARTS.forEach(part=>{
+    const chip = document.createElement('div');
+    chip.className = 'part-chip' + (structPlaced[part.id]?' placed':'') + (structSel===part.id?' selected':'');
+    chip.textContent = part.name;
+    chip.onclick = ()=>selectPart(part.id);
+    quiz.appendChild(chip);
+  });
+}
+function selectPart(id){
+  if(structPlaced[id]) return;
+  structSel = (structSel===id)?null:id;
+  renderStructure();
+}
+function placePart(id){
+  if(structSel===null) return;
+  if(structSel===id){
+    structPlaced[id] = true;
+    structSel = null;
+    renderStructure();
+    if(Object.keys(structPlaced).length===4){
+      document.getElementById('structure-result').innerHTML = '<div class="result-msg result-ok">🎉 完成！ 樹状突起→細胞体→軸索→軸索末端の順に興奮が伝わる。ペアで説明してみよう。</div>';
+    }
+  } else {
+    const wrap = document.getElementById('neuron-svg-wrap');
+    wrap.style.animation = 'none'; void wrap.offsetWidth;
+    document.getElementById('structure-result').innerHTML = '<div class="result-msg result-info">その場所ではないみたい。もう一度考えてみよう。</div>';
+    setTimeout(()=>{document.getElementById('structure-result').innerHTML='';},1500);
+    structSel = null; renderStructure();
+  }
+}
+
+// ═══════════ CONDUCTION ═══════════
+let condMyelin = false, condRAF = null;
+function setMyelin(on){
+  condMyelin = on;
+  document.getElementById('myelin-off').classList.toggle('active',!on);
+  document.getElementById('myelin-on').classList.toggle('active',on);
+  resetConduction();
+  // draw myelin segments
+  const track = document.getElementById('axon-track');
+  track.querySelectorAll('.myelin-seg').forEach(e=>e.remove());
+  if(on){
+    for(let i=0;i<4;i++){
+      const seg = document.createElement('div');
+      seg.className='myelin-seg';
+      seg.style.cssText=`position:absolute;top:50%;transform:translateY(-50%);height:52px;width:16%;left:${5+i*23}%;background:linear-gradient(180deg,#e8d0a0,#c8a860);border-radius:12px;border:1px solid #a88840;z-index:1`;
+      track.appendChild(seg);
+    }
+  }
+}
+function resetConduction(){
+  if(condRAF){cancelAnimationFrame(condRAF);condRAF=null;}
+  const imp = document.getElementById('impulse');
+  imp.style.transition='none'; imp.style.left='0'; imp.style.opacity='0';
+  document.getElementById('cond-phase').textContent='静止状態（外＋・内−）';
+  document.getElementById('speed-display').textContent='';
+}
+function runConduction(){
+  resetConduction();
+  const imp = document.getElementById('impulse');
+  const track = document.getElementById('axon-track');
+  const W = track.clientWidth;
+  imp.style.opacity='1';
+  const duration = condMyelin ? 900 : 2600; // myelinated faster
+  const start = performance.now();
+  document.getElementById('cond-phase').textContent='興奮が伝わっている（活動電位）';
+  function step(now){
+    let t = (now-start)/duration;
+    if(t>=1){ t=1; }
+    let x;
+    if(condMyelin){
+      // jump between nodes (saltatory) - discrete steps
+      const nodes = 5;
+      const seg = Math.floor(t*nodes);
+      x = (seg/(nodes-1))*(W-44);
+      imp.style.transform='translate(-50%,-50%) scale(1.15)';
+    } else {
+      x = t*(W-44);
+      imp.style.transform='translate(-50%,-50%) scale(1)';
+    }
+    imp.style.left = x+'px';
+    if(t<1){ condRAF=requestAnimationFrame(step); }
+    else {
+      document.getElementById('cond-phase').textContent='末端に到達！';
+      document.getElementById('speed-display').textContent = condMyelin
+        ? '⚡ 有髄：速い！ 興奮が髄鞘をとびこえた（跳躍伝導）'
+        : '🐢 無髄：順ぐりに伝わるのでゆっくり';
+    }
+  }
+  condRAF=requestAnimationFrame(step);
+}
+
+// ═══════════ SYNAPSE ═══════════
+let synStep = 0;
+const synExplains = [
+  '',
+  '① 軸索を伝わってきた興奮（活動電位）が、軸索の末端に到達する。',
+  '② 末端のふくろ（シナプス小胞）から、神経伝達物質という化学物質がシナプスのすきまに放出される。',
+  '③ 放出された神経伝達物質が、次の細胞の膜にある受容体で受け取られる。',
+  '④ 受け取った次の細胞に、新たな興奮が発生する。こうして興奮が次の細胞へ伝わった（＝伝達）。',
+];
+function synSVG(step){
+  let nt = '';
+  if(step>=2){
+    for(let i=0;i<5;i++){
+      const prog = step>=3 ? 1 : 0.5;
+      const y = 70 + i*8;
+      const x = 300 + (step>=3?120:40) + i*8;
+      nt += `<circle cx="${x}" cy="${y}" r="5" fill="#ffe040" stroke="#c8a020"/>`;
+    }
+  }
+  const cell2Active = step>=4;
+  return `<svg viewBox="0 0 640 180" style="width:100%">
+    <!-- axon terminal (left) -->
+    <path d="M 40 90 L 260 90" stroke="#c8a860" stroke-width="14" stroke-linecap="round"/>
+    <ellipse cx="270" cy="90" rx="40" ry="55" fill="#2a5040" stroke="#5ad080" stroke-width="2"/>
+    <text x="150" y="50" text-anchor="middle" font-size="12" fill="#80c0a0">前の細胞（軸索末端）</text>
+    ${step>=1?'<circle cx="230" cy="90" r="14" fill="#ffe040" opacity="0.9"><animate attributeName="opacity" values="0.4;1;0.4" dur="0.8s" repeatCount="indefinite"/></circle>':''}
+    ${step>=2?'<circle cx="285" cy="75" r="9" fill="#5ad080"/><circle cx="285" cy="105" r="9" fill="#5ad080"/>':''}
+    <!-- synaptic gap -->
+    <line x1="315" y1="40" x2="315" y2="140" stroke="#456" stroke-width="1" stroke-dasharray="3,3"/>
+    <line x1="360" y1="40" x2="360" y2="140" stroke="#456" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="337" y="160" text-anchor="middle" font-size="10" fill="#688">シナプス間隙</text>
+    <!-- next cell (right) -->
+    <rect x="360" y="45" width="240" height="90" rx="14" fill="${cell2Active?'#3a7048':'#2a4038'}" stroke="${cell2Active?'#7dff9e':'#5ad080'}" stroke-width="2" style="transition:all 0.5s"/>
+    <text x="480" y="30" text-anchor="middle" font-size="12" fill="#80c0a0">次の細胞</text>
+    ${cell2Active?'<text x="480" y="95" text-anchor="middle" font-size="16" fill="#7dff9e" font-weight="bold">⚡ 興奮！</text>':'<text x="480" y="95" text-anchor="middle" font-size="12" fill="#688">受容体で受け取る</text>'}
+    ${nt}
+  </svg>`;
+}
+function renderSynapse(){
+  for(let i=1;i<=4;i++){
+    const el = document.getElementById('syn-'+i);
+    el.classList.remove('active','done');
+    if(i<synStep) el.classList.add('done');
+    else if(i===synStep) el.classList.add('active');
+  }
+  document.getElementById('syn-viz').innerHTML = synSVG(synStep);
+  const ex = document.getElementById('syn-explain');
+  if(synStep===0){ ex.textContent='💭 「▶ 次のステップ」を押して、伝達のしくみを1つずつ見よう。'; }
+  else { ex.textContent = synExplains[synStep]; }
+  document.getElementById('syn-next-btn').textContent = synStep>=4?'✓ 完了！':'▶ 次のステップ';
+  document.getElementById('syn-next-btn').disabled = synStep>=4;
+}
+function synNextStep(){ if(synStep<4){synStep++;renderSynapse();} }
+function resetSynapse(){ synStep=0; renderSynapse(); }
+
+// ═══════════ SELF CHECK ═══════════
+const SELFCHECK = [
+  {q:'刺激の情報が、1本のニューロンの軸索の中を伝わることを何という？',
+   opts:['伝達','伝導','興奮'], correct:1,
+   exp:'1本の中を伝わる=伝導。細胞から細胞へ渡るのが伝達。'},
+  {q:'ニューロンで、ほかの細胞から情報を受け取る部分は？',
+   opts:['軸索','軸索末端','樹状突起'], correct:2,
+   exp:'樹状突起が入口。そこから細胞体→軸索→末端の順に伝わる。'},
+  {q:'興奮が髄鞘をとびこえて速く伝わることを何という？',
+   opts:['跳躍伝導','静止電位','シナプス伝達'], correct:0,
+   exp:'有髄神経では跳躍伝導が起こり、無髄より速く伝わる。'},
+  {q:'シナプスで、興奮を次の細胞へ伝えるために使われるものは？',
+   opts:['電気だけ','神経伝達物質（化学物質）','髄鞘'], correct:1,
+   exp:'シナプスでは神経伝達物質という化学物質を使って伝達する。'},
+  {q:'興奮したとき、膜の内外の＋−が一瞬逆転する電位変化は？',
+   opts:['静止電位','活動電位','伝達電位'], correct:1,
+   exp:'刺激がないとき=静止電位、興奮したとき=活動電位。'},
+];
+let scAnswers = {};
+function renderSelfcheck(){
+  scAnswers = {};
+  const c = document.getElementById('selfcheck-container');
+  c.innerHTML='';
+  SELFCHECK.forEach((item,qi)=>{
+    const div = document.createElement('div');
+    div.className='selfcheck-q';
+    let opts='';
+    item.opts.forEach((o,oi)=>{ opts += `<button class="sc-opt" onclick="pickSC(${qi},${oi})" id="sc-${qi}-${oi}">${o}</button>`; });
+    div.innerHTML = `<div class="q-text">Q${qi+1}. ${item.q}</div>${opts}<div class="sc-explain" id="sc-exp-${qi}">💡 ${item.exp}</div>`;
+    c.appendChild(div);
+  });
+  document.getElementById('selfcheck-result').innerHTML='';
+}
+function pickSC(qi,oi){
+  scAnswers[qi]=oi;
+  document.querySelectorAll(`[id^="sc-${qi}-"]`).forEach((b,i)=>{
+    b.style.borderColor = i===oi ? 'var(--neuron)' : 'var(--border)';
+    b.style.background = i===oi ? '#e4f0f8' : '#fff';
+  });
+}
+function gradeSelfcheck(){
+  let correct=0;
+  SELFCHECK.forEach((item,qi)=>{
+    const pick = scAnswers[qi];
+    document.querySelectorAll(`[id^="sc-${qi}-"]`).forEach((b,i)=>{
+      b.onclick=null;
+      if(i===item.correct) b.classList.add('correct');
+      else if(i===pick) b.classList.add('wrong');
+    });
+    document.getElementById('sc-exp-'+qi).classList.add('show');
+    if(pick===item.correct) correct++;
+  });
+  const pct = correct/SELFCHECK.length;
+  const cls = pct===1?'result-ok':'result-info';
+  const msg = pct===1?`🎉 全問正解（${correct}/${SELFCHECK.length}）！ 小テストの準備OK。`:`${correct}/${SELFCHECK.length} 正解。まちがえた所をペアで教え合おう。`;
+  document.getElementById('selfcheck-result').innerHTML = `<div class="result-msg ${cls}">${msg}</div>`;
+}
+function resetSelfcheck(){ renderSelfcheck(); }
+
+// ═══════════ INIT ═══════════
+window.addEventListener('DOMContentLoaded', ()=>{
+  renderCard();
+  renderStructure();
+  setMyelin(false);
+  renderSynapse();
+  renderSelfcheck();
+});
+</script>
+</body>
+</html>
