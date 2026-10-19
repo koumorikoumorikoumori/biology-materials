@@ -1,0 +1,465 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>血糖調節シミュレータ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=BIZ+UDGothic:wght@400;700&display=swap">
+<style>
+/* レイアウト：左に操作パネル、右に教科書と同じ縦積みグラフ。スマホでは縦に並ぶ */
+:root {
+  --bg: #F6F7F4; --panel: #FFFFFF; --ink: #1C2321; --sub: #59615D; --line: #D9DDD6; --grid: #E8EBE5;
+  --accent: #2F6B3A; --accent-soft: #E3EFE4;
+  --glu: #C8452B; --ins: #2563C9; --gcg: #5E8F1F; --warn: #B4232A; --warn-soft: #FBE8E7; --ok: #2F6B3A;
+  --p-healthy: #C8452B; --p-a: #5E8F1F; --p-b: #2563C9; --p-me: #7A4FB5;
+  --font: 'BIZ UDPGothic', 'Hiragino Sans', 'Yu Gothic', 'Noto Sans JP', sans-serif;
+  --mono: 'BIZ UDGothic', 'Hiragino Sans', 'Yu Gothic', monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141917; --panel: #1C2320; --ink: #E7ECE8; --sub: #A3ADA7; --line: #34403A; --grid: #28312C;
+  --accent: #7CC489; --accent-soft: #23362A;
+  --glu: #F07A5F; --ins: #6FA2F2; --gcg: #A3CF5E; --warn: #FF8A84; --warn-soft: #3A2222; --ok: #7CC489;
+  --p-healthy: #F07A5F; --p-a: #A3CF5E; --p-b: #6FA2F2; --p-me: #C3A2F0; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #141917; --panel: #1C2320; --ink: #E7ECE8; --sub: #A3ADA7; --line: #34403A; --grid: #28312C;
+  --accent: #7CC489; --accent-soft: #23362A;
+  --glu: #F07A5F; --ins: #6FA2F2; --gcg: #A3CF5E; --warn: #FF8A84; --warn-soft: #3A2222; --ok: #7CC489;
+  --p-healthy: #F07A5F; --p-a: #A3CF5E; --p-b: #6FA2F2; --p-me: #C3A2F0; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.6; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 20px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 24px; border-bottom: 2px solid var(--accent); padding-bottom: 10px; }
+h1 { font-size: 26px; margin: 0; text-wrap: balance; letter-spacing: .02em; }
+.eyebrow { font-size: 12px; color: var(--sub); letter-spacing: .08em; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 16px 0 14px; }
+.tab { font: inherit; font-weight: 700; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); padding: 8px 16px; border-radius: 999px; cursor: pointer; min-height: 44px; }
+.tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.tab:focus-visible, button:focus-visible, input:focus-visible, label:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.grid { display: grid; grid-template-columns: 310px minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 14px; }
+.panel h2 { font-size: 13px; letter-spacing: .08em; color: var(--sub); margin: 0 0 6px; font-weight: 700; }
+fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+legend { font-size: 13px; letter-spacing: .06em; color: var(--sub); font-weight: 700; margin-bottom: 4px; padding: 0; }
+.opt { display: flex; align-items: flex-start; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.opt:hover { background: var(--accent-soft); }
+.opt input { margin-top: 4px; accent-color: var(--accent); }
+.opt small { display: block; color: var(--sub); font-size: 12px; line-height: 1.4; }
+.tag { font-size: 11px; font-weight: 700; border: 1px solid var(--accent); color: var(--accent); border-radius: 4px; padding: 0 5px; margin-left: 4px; white-space: nowrap; }
+.btnrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+button.primary { font: inherit; font-weight: 700; background: var(--accent); color: var(--bg); border: 0; border-radius: 8px; padding: 10px 18px; min-height: 44px; cursor: pointer; }
+button.ghost { font: inherit; background: transparent; color: var(--ink); border: 1.5px solid var(--line); border-radius: 8px; padding: 9px 14px; min-height: 44px; cursor: pointer; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.slider { display: flex; flex-direction: column; gap: 2px; }
+.slider .lab { display: flex; justify-content: space-between; font-size: 13px; }
+.slider output { font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 700; }
+.readout { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 13px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; }
+.readout b { font-weight: 700; }
+.charts { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.chartbox { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 10px 4px; display: flex; flex-direction: column; gap: 2px; }
+.charthead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; padding: 0 6px; }
+.charthead .name { font-weight: 700; font-size: 14px; }
+.charthead .unit { font-size: 12px; color: var(--sub); }
+svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
+svg text { font-family: var(--font); fill: var(--sub); font-size: 11px; }
+.axis { stroke: var(--sub); stroke-width: 1; }
+.gridl { stroke: var(--grid); stroke-width: 1; }
+.alert { display: flex; gap: 8px; align-items: flex-start; background: var(--warn-soft); color: var(--warn); border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 700; }
+.note { font-size: 12px; color: var(--sub); line-height: 1.6; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; padding: 2px 6px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 22px; height: 0; border-top: 3px solid; display: inline-block; }
+table.sum { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+table.sum th, table.sum td { border-bottom: 1px solid var(--line); padding: 6px 6px; text-align: right; white-space: nowrap; }
+table.sum th:first-child, table.sum td:first-child { text-align: left; }
+table.sum thead th { color: var(--sub); font-size: 12px; font-weight: 700; }
+td.bad { color: var(--warn); font-weight: 700; }
+.tablewrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; }
+details { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 16px; margin-top: 18px; }
+summary { cursor: pointer; font-weight: 700; min-height: 32px; display: flex; align-items: center; }
+details p, details li { font-size: 14px; max-width: 70ch; }
+.hint { font-size: 13px; background: var(--accent-soft); border-radius: 8px; padding: 8px 12px; }
+[hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">生物基礎 ヒトの体の調節 ｜ 教科書 p.113〜116</div>
+      <h1>血糖調節シミュレータ</h1>
+    </div>
+    <div class="note">学習用のモデルです。実際の測定値・診断・治療とは異なります。</div>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="モード">
+    <button class="tab" role="tab" id="tab-1" aria-selected="true" aria-controls="view-1">探究10　食後の血糖濃度</button>
+    <button class="tab" role="tab" id="tab-2" aria-selected="false" aria-controls="view-2">p.116　糖尿病と1日の変化</button>
+  </div>
+
+  <!-- ───────── 探究10 ───────── -->
+  <section id="view-1" role="tabpanel" aria-labelledby="tab-1">
+    <div class="grid">
+      <div class="panel">
+        <fieldset>
+          <legend>できごと</legend>
+          <label class="opt"><input type="radio" name="ev" id="ev-meal" value="meal" checked><span>糖を摂取する（0分）<small>教科書の図bと同じ条件</small></span></label>
+          <label class="opt"><input type="radio" name="ev" id="ev-ex" value="ex"><span>運動する（0〜60分）<small>糖はとらない。筋肉がグルコースを使う</small></span></label>
+        </fieldset>
+        <fieldset>
+          <legend>体のはたらき</legend>
+          <label class="opt"><input type="radio" name="sc" id="sc-normal" value="normal" checked><span>ふつう（健康な人）</span></label>
+          <label class="opt"><input type="radio" name="sc" id="sc-force" value="force"><span>インスリンが出続ける<span class="tag">考察B</span><small>0分から、血糖に関係なく分泌し続ける</small></span></label>
+          <label class="opt"><input type="radio" name="sc" id="sc-noup" value="noup"><span>血糖を上げるホルモンが反応しない<span class="tag">考察D</span><small>分泌量がずっと一定のまま</small></span></label>
+          <label class="opt"><input type="radio" name="sc" id="sc-nodown" value="nodown"><span>血糖を下げるホルモンが反応しない<span class="tag">考察D</span><small>分泌量がずっと一定のまま</small></span></label>
+        </fieldset>
+        <fieldset>
+          <legend>表示</legend>
+          <label class="opt"><input type="checkbox" id="show-names"><span>ホルモンAとBの名前を表示する<small>考察Aの答えを書いてから開こう</small></span></label>
+          <label class="opt"><input type="checkbox" id="show-base" checked><span>「ふつう」の変化を点線で重ねる</span></label>
+          <label class="opt"><input type="checkbox" id="show-book"><span>教科書 図bの値（目安）を点で重ねる<small id="book-note" hidden>図bは糖を摂取したときのグラフなので、「糖を摂取する」のときだけ重ねられます</small></span></label>
+        </fieldset>
+        <div class="btnrow">
+          <button class="primary" id="play1">▶ 再生する</button>
+          <button class="ghost" id="end1">最後まで表示</button>
+        </div>
+        <div class="slider">
+          <div class="lab"><label for="t1">時間を動かす</label><output id="t1o" for="t1">240 分</output></div>
+          <input type="range" id="t1" min="-60" max="240" step="1" value="240">
+        </div>
+        <div class="readout" id="read1" aria-live="polite"></div>
+      </div>
+
+      <div class="charts">
+        <div class="alert" id="alert1" hidden></div>
+        <div class="chartbox">
+          <div class="charthead"><span class="name">血糖濃度</span><span class="unit">mg/100mL</span></div>
+          <svg class="chart" id="c1g" viewBox="0 0 640 170" role="img" aria-label="血糖濃度のグラフ"></svg>
+        </div>
+        <div class="chartbox">
+          <div class="charthead"><span class="name" id="nameA">ホルモンA の量</span><span class="unit">相対値</span></div>
+          <svg class="chart" id="c1a" viewBox="0 0 640 150" role="img" aria-label="ホルモンAのグラフ"></svg>
+        </div>
+        <div class="chartbox">
+          <div class="charthead"><span class="name" id="nameB">ホルモンB の量</span><span class="unit">10<sup>−12</sup> g/mL</span></div>
+          <svg class="chart" id="c1b" viewBox="0 0 640 170" role="img" aria-label="ホルモンBのグラフ"></svg>
+        </div>
+        <div class="hint" id="hint1"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────── p.116 糖尿病 ───────── -->
+  <section id="view-2" role="tabpanel" aria-labelledby="tab-2" hidden>
+    <div class="grid">
+      <div class="panel">
+        <fieldset>
+          <legend>くらべる人</legend>
+          <label class="opt"><input type="checkbox" id="p-healthy" checked><span><span class="sw" style="border-color:var(--p-healthy)"></span> 健康な人</span></label>
+          <label class="opt"><input type="checkbox" id="p-a" checked><span><span class="sw" style="border-color:var(--p-a);border-top-style:dashed"></span> Aさん</span></label>
+          <label class="opt"><input type="checkbox" id="p-b" checked><span><span class="sw" style="border-color:var(--p-b);border-top-style:dotted"></span> Bさん</span></label>
+          <label class="opt"><input type="checkbox" id="p-me"><span><span class="sw" style="border-color:var(--p-me);border-top-style:double;border-top-width:4px"></span> 自分で条件を決めた人<small>下のスライダーで体のはたらきを決める</small></span></label>
+        </fieldset>
+        <div id="mebox" class="panel" style="padding:10px 12px;gap:10px;background:var(--bg)" hidden>
+          <div class="slider">
+            <div class="lab"><label for="me-c">① インスリンを分泌する力<br><small style="color:var(--sub)">すい臓のB細胞</small></label><output id="me-co" for="me-c">100 %</output></div>
+            <input type="range" id="me-c" min="0" max="150" step="5" value="100">
+          </div>
+          <div class="slider">
+            <div class="lab"><label for="me-s">② インスリンへの反応<br><small style="color:var(--sub)">肝臓・筋肉が取り込む力</small></label><output id="me-so" for="me-s">100 %</output></div>
+            <input type="range" id="me-s" min="0" max="150" step="5" value="100">
+          </div>
+          <div class="note">AさんやBさんと同じグラフになる組み合わせを探すと、どこに異常があるかが分かります。</div>
+        </div>
+        <fieldset>
+          <legend>全員に同じ条件をつける</legend>
+          <div class="slider">
+            <div class="lab"><label for="inj">食事のたびにインスリンを注射</label><output id="injo" for="inj">なし</output></div>
+            <input type="range" id="inj" min="0" max="300" step="25" value="0">
+          </div>
+          <div class="note" style="margin:2px 0 6px">注射量は相対値です。</div>
+          <label class="opt"><input type="radio" name="eat" value="80" id="eat-slow"><span>ゆっくり食べる<small>糖がゆっくり吸収される</small></span></label>
+          <label class="opt"><input type="radio" name="eat" value="50" id="eat-normal" checked><span>ふつうに食べる</span></label>
+          <label class="opt"><input type="radio" name="eat" value="35" id="eat-fast"><span>早食い・甘い飲み物<small>糖が一気に吸収される</small></span></label>
+          <label class="opt"><input type="checkbox" id="walk"><span>食後10分から40分歩く</span></label>
+        </fieldset>
+        <div class="btnrow">
+          <button class="primary" id="play2">▶ 1日を再生する</button>
+          <button class="ghost" id="end2">最後まで表示</button>
+        </div>
+      </div>
+
+      <div class="charts">
+        <div class="alert" id="alert2" hidden></div>
+        <div class="chartbox">
+          <div class="charthead"><span class="name">血糖濃度</span><span class="unit">mg/100mL　点線：140（食後の上限の目安）と 70（低血糖の目安）</span></div>
+          <div class="legend" id="leg2"></div>
+          <svg class="chart" id="c2g" viewBox="0 0 640 200" role="img" aria-label="1日の血糖濃度のグラフ"></svg>
+        </div>
+        <div class="chartbox">
+          <div class="charthead"><span class="name">血液中のインスリン濃度</span><span class="unit">相対値</span></div>
+          <svg class="chart" id="c2i" viewBox="0 0 640 170" role="img" aria-label="1日のインスリン濃度のグラフ"></svg>
+        </div>
+        <div class="tablewrap">
+          <table class="sum" id="sum2">
+            <thead><tr><th>人</th><th>最高値</th><th>最低値</th><th>平均</th><th>140を超えた時間</th><th>70未満の時間</th><th>尿糖が出た時間</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="note">血糖濃度が約170 mg/100mLを超えると、腎臓で再吸収しきれず尿にグルコースが出る（尿糖）としています（p.115）。</div>
+      </div>
+    </div>
+  </section>
+
+  <details>
+    <summary>このシミュレータのしくみ（チャレンジコース向け）</summary>
+    <p>1分ごとに、血糖濃度の「増える量」と「減る量」を計算して足し引きしています。</p>
+    <ul>
+      <li><b>増える：</b>食事で小腸から吸収されるグルコース ＋ 肝臓がグリコーゲンを分解して出すグルコース（グルカゴンで増え、インスリンで減る）</li>
+      <li><b>減る：</b>肝臓・筋肉などが取り込むグルコース（インスリンで増える。②の反応が低いと増えにくい）＋ 運動で使う分 ＋ 尿に出る分</li>
+      <li><b>インスリン：</b>血糖濃度が高いほど多く分泌される（①の分泌する力をかける）</li>
+      <li><b>グルカゴン：</b>血糖濃度が低いほど多く分泌され、高いと減る</li>
+    </ul>
+    <p>健康な人の数値は、教科書の図bの曲線に近くなるよう調整しています。インスリンの量（相対値）とグルカゴンの量は、教科書の目盛りに合わせた目安です。モデルにない体のはたらき（アドレナリン、糖質コルチコイド、自律神経など）はp.117の探究11で学びます。</p>
+  </details>
+</div>
+
+<script>
+// ───────── モデル（1分きざみ） ─────────
+function simulate(o) {
+  const P = Object.assign({ t0: -60, t1: 240, meals: [{ t: 0, size: 1 }], tau: 50, c: 1, S: 1,
+    regI: true, regN: true, forceI: null, inject: 0, exercise: [] }, o);
+  const K = { D: 640, p0: 0.0058, pI: 0.00059, a: 0.0148, Ib: 10, kp: 1.4, Gth: 88, tauI: 10.5, tauN: 10, renal: 170 };
+  const pN = (K.p0 + K.pI * K.Ib) * K.Gth * (1 + K.a * K.Ib) / 120;
+  let G = K.Gth, I = K.Ib, N = 120, J = 0, X = 0;
+  const step = (t, rec) => {
+    let Ra = 0;
+    for (const m of P.meals) if (t >= m.t) { const s = t - m.t; Ra += K.D * m.size * s / (P.tau * P.tau) * Math.exp(-s / P.tau); }
+    let ex = 0;
+    for (const e of P.exercise) if (t >= e.t && t < e.t + e.dur) ex += e.k;
+    let Ti = P.regI ? P.c * (K.Ib + K.kp * Math.max(0, G - K.Gth)) : P.c * K.Ib;
+    if (P.forceI != null && t >= 0) Ti = P.forceI;
+    I += (Ti - I) / K.tauI;
+    for (const m of P.meals) if (P.inject && t === m.t) J += P.inject;
+    const flow = J / 20; J -= flow; X += flow - X / 45;
+    const Ieff = I + X;
+    let Tn = G >= K.Gth ? 120 - 0.6 * (G - K.Gth) : 120 + 3.2 * (K.Gth - G);
+    Tn = Math.max(70, Math.min(320, Tn));
+    if (!P.regN) Tn = 120;
+    N += (Tn - N) / K.tauN;
+    const egp = pN * N / (1 + K.a * P.S * Ieff);
+    const up = (K.p0 + K.pI * P.S * Ieff + ex) * G;
+    const urine = G > K.renal ? 0.02 * (G - K.renal) : 0;
+    G = Math.max(20, G + Ra + egp - up - urine);
+    if (rec) rec.push({ t, G, I: Ieff, N });
+  };
+  for (let k = 0; k < 900; k++) step(-99999, null);
+  const rec = [];
+  for (let t = P.t0; t <= P.t1; t++) step(t, rec);
+  return rec;
+}
+
+// ───────── グラフ描画（SVG） ─────────
+const NS = 'http://www.w3.org/2000/svg';
+const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+const niceMax = (v, base, stepSize) => Math.max(base, Math.ceil(v / stepSize) * stepSize);
+
+function drawChart(svg, cfg) {
+  // cfg: {w,h, x0,x1, xticks:[{v,label}], yMax, yStep, series:[{data:[[x,y]], color, dash, width, opacity}], points:[{data, color}], refs:[{y,label}], cursor, mealMarks:[x], bands:[{x0,x1,label}]}
+  svg.textContent = '';
+  const W = 640, H = +svg.getAttribute('viewBox').split(' ')[3];
+  const L = 46, R = 12, T = 10, B = cfg.xlabel ? 34 : 22;
+  const X = v => L + (v - cfg.x0) / (cfg.x1 - cfg.x0) * (W - L - R);
+  const Y = v => T + (1 - v / cfg.yMax) * (H - T - B);
+  for (const b of cfg.bands || []) {
+    el('rect', { x: X(b.x0), y: T, width: X(b.x1) - X(b.x0), height: H - T - B, fill: 'var(--accent-soft)' }, svg);
+    const t = el('text', { x: (X(b.x0) + X(b.x1)) / 2, y: T + 12, 'text-anchor': 'middle', style: 'fill:var(--accent);font-weight:700' }, svg); t.textContent = b.label;
+  }
+  for (let v = 0; v <= cfg.yMax + 1e-9; v += cfg.yStep) {
+    el('line', { x1: L, x2: W - R, y1: Y(v), y2: Y(v), class: 'gridl' }, svg);
+    const t = el('text', { x: L - 6, y: Y(v) + 4, 'text-anchor': 'end' }, svg); t.textContent = Math.round(v);
+  }
+  el('line', { x1: L, x2: L, y1: T, y2: H - B, class: 'axis' }, svg);
+  el('line', { x1: L, x2: W - R, y1: H - B, y2: H - B, class: 'axis' }, svg);
+  for (const tk of cfg.xticks) {
+    el('line', { x1: X(tk.v), x2: X(tk.v), y1: H - B, y2: H - B + 4, class: 'axis' }, svg);
+    const t = el('text', { x: X(tk.v), y: H - B + 15, 'text-anchor': 'middle' }, svg); t.textContent = tk.label;
+  }
+  if (cfg.xlabel) { const t = el('text', { x: W - R, y: H - 4, 'text-anchor': 'end' }, svg); t.textContent = cfg.xlabel; }
+  for (const m of cfg.mealMarks || []) {
+    el('rect', { x: X(m) - 7, y: H - B - 5, width: 14, height: 5, rx: 1, fill: '#E3A21A' }, svg);
+  }
+  if (cfg.vline != null) el('line', { x1: X(cfg.vline), x2: X(cfg.vline), y1: T, y2: H - B, stroke: 'var(--sub)', 'stroke-dasharray': '4 3', 'stroke-width': 1 }, svg);
+  for (const r of cfg.refs || []) {
+    if (r.y > cfg.yMax) continue;
+    el('line', { x1: L, x2: W - R, y1: Y(r.y), y2: Y(r.y), stroke: r.color || 'var(--sub)', 'stroke-dasharray': '2 3', 'stroke-width': 1.2 }, svg);
+    const t = el('text', { x: W - R - 2, y: Y(r.y) - 3, 'text-anchor': 'end', style: `fill:${r.color || 'var(--sub)'}` }, svg); t.textContent = r.label;
+  }
+  const clip = cfg.cursor == null ? cfg.x1 : cfg.cursor;
+  for (const s of cfg.series) {
+    const pts = s.data.filter(p => p[0] <= clip).map(p => `${X(p[0]).toFixed(1)},${Y(Math.min(p[1], cfg.yMax)).toFixed(1)}`);
+    if (pts.length > 1) el('polyline', { points: pts.join(' '), fill: 'none', stroke: s.color, 'stroke-width': s.width || 2.6, 'stroke-dasharray': s.dash || '', opacity: s.opacity ?? 1, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, svg);
+    if (s.endDot && pts.length) { const [x, y] = pts[pts.length - 1].split(','); el('circle', { cx: x, cy: y, r: 4, fill: s.color }, svg); }
+  }
+  for (const p of cfg.points || []) for (const d of p.data) {
+    el('circle', { cx: X(d[0]), cy: Y(d[1]), r: 3.6, fill: 'var(--panel)', stroke: p.color, 'stroke-width': 1.8 }, svg);
+  }
+  if (cfg.cursor != null && cfg.cursor < cfg.x1) el('line', { x1: X(cfg.cursor), x2: X(cfg.cursor), y1: T, y2: H - B, stroke: 'var(--ink)', 'stroke-width': 1, opacity: .5 }, svg);
+}
+
+// ───────── 探究10 ─────────
+const BOOK = { // 教科書 図b の読み取り値（目安）
+  G: [[-60, 90], [-30, 88], [0, 85], [15, 100], [30, 125], [45, 135], [60, 122], [90, 115], [120, 107], [150, 105], [180, 102], [210, 97], [240, 95]],
+  A: [[-60, 9], [-30, 8], [0, 9], [15, 25], [30, 48], [45, 67], [60, 60], [90, 50], [120, 48], [150, 40], [180, 28], [210, 22], [240, 22]],
+  B: [[-60, 120], [-30, 118], [0, 124], [15, 124], [25, 105], [35, 96], [60, 98], [90, 96], [120, 97], [180, 100], [210, 97], [240, 102]],
+};
+const $ = id => document.getElementById(id);
+const s1 = { cursor: 240, playing: false };
+function opts1() {
+  const ev = document.querySelector('input[name=ev]:checked').value;
+  const sc = document.querySelector('input[name=sc]:checked').value;
+  const o = ev === 'meal' ? {} : { meals: [], exercise: [{ t: 0, dur: 60, k: 0.008 }] };
+  if (sc === 'force') o.forceI = 60;
+  if (sc === 'noup') o.regN = false;
+  if (sc === 'nodown') o.regI = false;
+  return { o, ev, sc };
+}
+const HINTS = {
+  normal: { meal: '血糖濃度が上がると、ホルモンAとBはそれぞれどう変化したか。再生しながら「どちらが先に動いたか」も見てみよう。',
+            ex: '運動でグルコースが使われて血糖濃度が下がると、どちらのホルモンが増えたか。そのホルモンは血糖濃度を上げる？下げる？' },
+  force: { meal: '考察B：インスリンが出続けると、血糖濃度はどこまで下がるか。もう一方のホルモンが増えても止められるだろうか。',
+           ex: '考察B：運動中にインスリンが出続けると、血糖濃度はどうなるか。' },
+  noup: { meal: '考察D：食後だけを見ると「ふつう」とほとんど同じ。上げるホルモンが役に立つのはどんなときか、「運動する」に切り替えて確かめよう。',
+          ex: '考察D：運動で下がった血糖濃度が、ふつう（点線）と比べて戻りにくいことを確かめよう。' },
+  nodown: { meal: '考察D：下げるホルモンが反応しないと、食後の血糖濃度はどこまで上がり、元に戻るまでどのくらいかかるか。',
+            ex: '考察D：運動のときは「ふつう」と比べてどうか。食後と運動の両方を見て、2つのホルモンがそろう意味を考えよう。' },
+};
+function render1() {
+  const { o, ev, sc } = opts1();
+  const r = simulate(o);
+  const base = simulate(ev === 'meal' ? {} : { meals: [], exercise: [{ t: 0, dur: 60, k: 0.008 }] });
+  const names = $('show-names').checked, showBase = $('show-base').checked && sc !== 'normal', book = $('show-book').checked && ev === 'meal';
+  $('nameA').textContent = names ? 'ホルモンA（インスリン）の量' : 'ホルモンA の量';
+  $('nameB').textContent = names ? 'ホルモンB（グルカゴン）の量' : 'ホルモンB の量';
+  const xt = [-60, 0, 60, 120, 180, 240].map(v => ({ v, label: v === 0 ? (ev === 'meal' ? '0 糖の摂取' : '0 運動開始') : String(v) }));
+  const common = { x0: -60, x1: 240, xticks: xt, cursor: s1.cursor, vline: 0, bands: ev === 'ex' ? [{ x0: 0, x1: 60, label: '運動中' }] : [] };
+  const mk = (k) => r.map(p => [p.t, p[k]]);
+  const mkb = (k) => base.map(p => [p.t, p[k]]);
+  const gRaw = Math.max(...r.map(p => p.G), ...(showBase ? base.map(p => p.G) : [0]));
+  const gStep = gRaw > 200 ? 40 : 20, gmax = niceMax(gRaw, 140, gStep);
+  drawChart($('c1g'), { ...common, yMax: gmax, yStep: gStep,
+    refs: [{ y: 70, label: '70 低血糖の目安', color: 'var(--warn)' }],
+    series: [...(showBase ? [{ data: mkb('G'), color: 'var(--glu)', dash: '5 4', width: 1.6, opacity: .55 }] : []), { data: mk('G'), color: 'var(--glu)', endDot: true }],
+    points: book ? [{ data: BOOK.G, color: 'var(--glu)' }] : [] });
+  const aRaw = Math.max(...r.map(p => p.I), ...(showBase ? base.map(p => p.I) : [0]));
+  const aStep = aRaw > 100 ? 20 : 10, amax = niceMax(aRaw, 70, aStep);
+  drawChart($('c1a'), { ...common, yMax: amax, yStep: aStep,
+    series: [...(showBase ? [{ data: mkb('I'), color: 'var(--ins)', dash: '5 4', width: 1.6, opacity: .55 }] : []), { data: mk('I'), color: 'var(--ins)', endDot: true }],
+    points: book ? [{ data: BOOK.A, color: 'var(--ins)' }] : [] });
+  const bRaw = Math.max(...r.map(p => p.N), ...(showBase ? base.map(p => p.N) : [0]));
+  const bStep = bRaw > 200 ? 40 : 20, bmax = niceMax(bRaw, 140, bStep);
+  drawChart($('c1b'), { ...common, xlabel: '経過時間（分）', yMax: bmax, yStep: bStep,
+    series: [...(showBase ? [{ data: mkb('N'), color: 'var(--gcg)', dash: '5 4', width: 1.6, opacity: .55 }] : []), { data: mk('N'), color: 'var(--gcg)', endDot: true }],
+    points: book ? [{ data: BOOK.B, color: 'var(--gcg)' }] : [] });
+  const cur = r.find(p => p.t === Math.round(s1.cursor)) || r[r.length - 1];
+  $('t1').value = Math.round(s1.cursor); $('t1o').textContent = Math.round(s1.cursor) + ' 分';
+  $('read1').innerHTML = `<span>時間</span><b>${cur.t} 分</b><span>血糖濃度</span><b style="color:var(--glu)">${cur.G.toFixed(0)} mg/100mL</b><span>ホルモンA</span><b style="color:var(--ins)">${cur.I.toFixed(0)}</b><span>ホルモンB</span><b style="color:var(--gcg)">${cur.N.toFixed(0)}</b>`;
+  const shown = r.filter(p => p.t <= s1.cursor);
+  const minG = Math.min(...shown.map(p => p.G)), maxG = Math.max(...shown.map(p => p.G));
+  const a = $('alert1');
+  if (minG < 70) { a.hidden = false; a.textContent = `血糖濃度が ${minG.toFixed(0)} mg/100mL まで下がっています。70を下回ると低血糖になり、ふるえ・意識がぼんやりするなどの症状が出ることがあります。`; }
+  else if (maxG > 170) { a.hidden = false; a.textContent = `血糖濃度が ${maxG.toFixed(0)} mg/100mL まで上がっています。約170を超えると尿にグルコースが出ます（尿糖）。`; }
+  else a.hidden = true;
+  $('hint1').textContent = HINTS[sc][ev];
+  $('show-book').disabled = ev !== 'meal';
+  $('book-note').hidden = ev === 'meal';
+}
+
+// ───────── p.116 糖尿病 ─────────
+const PEOPLE = [
+  { id: 'healthy', name: '健康な人', c: 1, S: 1, color: 'var(--p-healthy)', dash: '' },
+  { id: 'a', name: 'Aさん', c: 0.12, S: 1, color: 'var(--p-a)', dash: '8 5' },
+  { id: 'b', name: 'Bさん', c: 1.1, S: 0.2, color: 'var(--p-b)', dash: '2 4' },
+  { id: 'me', name: '自分で決めた人', c: 1, S: 1, color: 'var(--p-me)', dash: '12 4 3 4' },
+];
+const MEALS = [420, 720, 1140];
+const s2 = { cursor: 1440 };
+function render2() {
+  PEOPLE[3].c = +$('me-c').value / 100; PEOPLE[3].S = +$('me-s').value / 100;
+  $('me-co').textContent = $('me-c').value + ' %'; $('me-so').textContent = $('me-s').value + ' %';
+  $('mebox').hidden = !$('p-me').checked;
+  const inj = +$('inj').value; $('injo').textContent = inj ? inj : 'なし';
+  const tau = +document.querySelector('input[name=eat]:checked').value;
+  const walk = $('walk').checked;
+  const base = { t0: 360, t1: 1440, meals: MEALS.map(t => ({ t, size: 1 })), tau, inject: inj,
+    exercise: walk ? MEALS.map(t => ({ t: t + 10, dur: 40, k: 0.012 })) : [] };
+  const shown = PEOPLE.filter(p => $('p-' + p.id).checked);
+  const runs = shown.map(p => ({ p, r: simulate({ ...base, c: p.c, S: p.S }) }));
+  const xt = [6, 9, 12, 15, 18, 21, 24].map(h => ({ v: h * 60, label: h + '時' }));
+  const common = { x0: 360, x1: 1440, xticks: xt, cursor: s2.cursor, mealMarks: MEALS };
+  const gmax = niceMax(Math.max(160, ...runs.flatMap(x => x.r.map(p => p.G))), 160, 40);
+  drawChart($('c2g'), { ...common, yMax: gmax, yStep: 40,
+    refs: [{ y: 140, label: '140' }, { y: 70, label: '70', color: 'var(--warn)' }],
+    series: runs.map(({ p, r }) => ({ data: r.map(q => [q.t, q.G]), color: p.color, dash: p.dash, endDot: true })) });
+  const iRaw = Math.max(80, ...runs.flatMap(x => x.r.map(p => p.I)));
+  const iStep = iRaw > 160 ? 40 : 20, imax = niceMax(iRaw, 80, iStep);
+  drawChart($('c2i'), { ...common, xlabel: '時刻　■は食事', yMax: imax, yStep: iStep,
+    series: runs.map(({ p, r }) => ({ data: r.map(q => [q.t, q.I]), color: p.color, dash: p.dash, endDot: true })) });
+  $('leg2').innerHTML = runs.map(({ p }) => `<span><span class="sw" style="border-color:${p.color};border-top-style:${p.dash === '' ? 'solid' : p.dash.startsWith('2') ? 'dotted' : p.dash.startsWith('12') ? 'double' : 'dashed'}"></span>${p.name}</span>`).join('');
+  const tb = $('sum2').querySelector('tbody'); tb.innerHTML = '';
+  let low = null;
+  for (const { p, r } of runs) {
+    const v = r.filter(q => q.t <= s2.cursor); if (!v.length) continue;
+    const g = v.map(q => q.G);
+    const mx = Math.max(...g), mn = Math.min(...g), av = g.reduce((a, b) => a + b, 0) / g.length;
+    const over = g.filter(x => x > 140).length, under = g.filter(x => x < 70).length, uri = g.filter(x => x > 170).length;
+    const fmt = m => m === 0 ? '0分' : (m >= 60 ? `${Math.floor(m / 60)}時間${m % 60 ? (m % 60) + '分' : ''}` : m + '分');
+    tb.insertAdjacentHTML('beforeend', `<tr><td><span class="sw" style="border-color:${p.color};border-top-style:${p.dash === '' ? 'solid' : p.dash.startsWith('2') ? 'dotted' : p.dash.startsWith('12') ? 'double' : 'dashed'}"></span> ${p.name}</td><td>${mx.toFixed(0)}</td><td class="${mn < 70 ? 'bad' : ''}">${mn.toFixed(0)}</td><td>${av.toFixed(0)}</td><td class="${over > 0 ? 'bad' : ''}">${fmt(over)}</td><td class="${under > 0 ? 'bad' : ''}">${fmt(under)}</td><td class="${uri > 0 ? 'bad' : ''}">${fmt(uri)}</td></tr>`);
+    if (mn < 70 && (!low || mn < low.mn)) low = { name: p.name, mn };
+  }
+  const a = $('alert2');
+  if (!runs.length) { a.hidden = false; a.textContent = '「くらべる人」を1人以上選んでください。'; }
+  else if (low) { a.hidden = false; a.textContent = `${low.name}の血糖濃度が ${low.mn.toFixed(0)} mg/100mL まで下がっています（低血糖）。` +
+    (inj ? 'インスリン注射の量が多すぎると、このような危険があります。' : 'インスリンが効きすぎると、血糖濃度が下がりすぎてしまいます。'); }
+  else a.hidden = true;
+}
+
+// ───────── 再生 ─────────
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function stop(state) { state.run = (state.run || 0) + 1; if (state.btn) state.btn.disabled = false; }
+function play(state, from, to, ms, render, btn) {
+  stop(state); state.btn = btn;
+  if (reduce) { state.cursor = to; render(); return; }
+  const id = state.run; state.cursor = from; const t0 = performance.now(); btn.disabled = true;
+  const tick = now => {
+    if (id !== state.run) return; // 途中で止められた
+    const k = Math.min(1, (now - t0) / ms); state.cursor = from + (to - from) * k; render();
+    if (k < 1) requestAnimationFrame(tick); else btn.disabled = false;
+  };
+  requestAnimationFrame(tick);
+}
+$('play1').onclick = () => play(s1, -60, 240, 6000, render1, $('play1'));
+$('end1').onclick = () => { stop(s1); s1.cursor = 240; render1(); };
+$('t1').oninput = e => { stop(s1); s1.cursor = +e.target.value; render1(); };
+$('play2').onclick = () => play(s2, 360, 1440, 8000, render2, $('play2'));
+$('end2').onclick = () => { stop(s2); s2.cursor = 1440; render2(); };
+document.querySelectorAll('#view-1 input').forEach(i => { if (i.id !== 't1') i.addEventListener('change', render1); });
+document.querySelectorAll('#view-2 input').forEach(i => i.addEventListener(i.type === 'range' ? 'input' : 'change', render2));
+
+// ───────── タブ ─────────
+function showTab(n) {
+  stop(s1); stop(s2); s1.cursor = 240; s2.cursor = 1440;
+  for (const k of [1, 2]) { const t = $('tab-' + k); t.setAttribute('aria-selected', String(k === n)); t.tabIndex = k === n ? 0 : -1; $('view-' + k).hidden = k !== n; }
+  if (n === 2) render2(); else render1();
+  try { localStorage.setItem('glucose-tab', String(n)); } catch (e) {}
+}
+$('tab-1').onclick = () => showTab(1);
+$('tab-2').onclick = () => showTab(2);
+for (const k of [1, 2]) $('tab-' + k).addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { const n = k === 1 ? 2 : 1; showTab(n); $('tab-' + n).focus(); e.preventDefault(); }
+});
+let startTab = location.hash === '#diabetes' ? 2 : 1;
+try { if (!location.hash) startTab = +(localStorage.getItem('glucose-tab') || 1); } catch (e) {}
+showTab(startTab === 2 ? 2 : 1);
+</script>
+
+</body></html>
